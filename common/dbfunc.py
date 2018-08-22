@@ -1,5 +1,5 @@
 from flask import request, make_response, jsonify, Response, redirect
-import setstatus as stat
+from nawalcube.common import error_logics as errhand
 
 import psycopg2
 import psycopg2.extras
@@ -7,17 +7,26 @@ import psycopg2.extras
 def mydbfunc(con,cur,command):
     s = 0
     f = None
+    t = None
     try:
         cur.execute(command)
     except psycopg2.Error as e:
         print(e)
-        # myerror= {'natstatus':'error','statusdetails':''}
-        s, f = stat.get_status(s, 2, f, e )
+        """
+        print(type(e))
+        print(e.diag)
+        print(e.args)
+        print(e.cursor)
+        print(e.pgcode)
+        print(e.pgerror)
+        myerror= {'natstatus':'error','statusdetails':''}
+        """
+        s, f, t = errhand.get_status(s, 200, f, e.pgcode + e.pgerror, t , "no")
     except psycopg2.Warning as e:
         print(e)
         #myerror={'natstatus':'warning','statusdetails':''}
         #myerror = {'natstatus':'warning','statusdetails':e}
-        s, f = stat.get_status(s, -1, f, 'DB Warning ' + e )
+        s, f = errhand.get_status(s, -100, f, e.pgcode + e.pgerror, t , "no")
     finally:
         if s > 0:    
             con.rollback()
@@ -28,6 +37,7 @@ def mydbfunc(con,cur,command):
 def mydbopncon():
     s = 0
     f = None
+    t = None
     try:
         con
     except NameError:
@@ -53,11 +63,12 @@ def mydbcloseall(con,cur):
 def mydbbegin(con,cur):
     s = 0
     f = None
+    t = None
     command = cur.mogrify("BEGIN;")
     cur, s, f = mydbfunc(con,cur,command)
     
     if cur.closed == True:
-        s, f = stat.get_status(s, 2, f, "BEGIN statement execution failed")
+        s, f = errhand.get_status(s, 200, f, "BEGIN statement execution failed", t , "no")
     else:
         print("BEGIN statment execution successful")
     

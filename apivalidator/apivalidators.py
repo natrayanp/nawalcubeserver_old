@@ -1,7 +1,7 @@
 from . import bp_apivali
-
+from flask import redirect, request,make_response, jsonify
 from datetime import datetime
-
+from nawalcube.common import jwtdecodenoverify as jwtnv
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import auth
@@ -15,12 +15,7 @@ def apiaccessvali():
     session_id = None
     path = request.path
 
-    if 'Authorization' in request.headers:
-        print('inside Authorization')
-        token_full = request.headers.get('Authorization')
-        
-        if token_full.startswith("Bearer "):
-            token =  token_full[7:]
+    token, userid, entityid = jwtnv.validatetoken(request, needtkn = True)
     
     if 'mysession' in request.headers:
         print('inside mysession')
