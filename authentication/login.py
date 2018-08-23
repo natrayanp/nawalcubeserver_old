@@ -12,9 +12,26 @@ import os
 
 
 @bp_auth.route("/login")
-@bp_login.route("/login")
+@bp_login.route("/login",methods=["GET","OPTIONS"])
 def login():
-    return "login"
+        if request.method=="OPTIONS":
+            print("inside signup options")
+            return "inside signup options"
+
+    elif request.method=="GET":
+        print("inside signup GET")
+        s = 0
+        f = None
+        t = None #message to front end
+        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    
+        userid, entityid, cntryid = jwtnv.validatetoken(request, needtkn = False)
+        print('iamback')
+        print(token)
+        print(userid)
+        print(entityid)
+
+        return "login"
 
 
 @bp_login.route("/signup",methods=["GET","POST","OPTIONS"])
