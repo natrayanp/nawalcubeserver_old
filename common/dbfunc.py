@@ -4,10 +4,22 @@ from nawalcube.common import error_logics as errhand
 import psycopg2
 import psycopg2.extras
 
+ENV = 3
+# 0 - DEV
+# 1- SIT
+# 2 - UAT
+# 3 - PROD
+CON_STR = ["host='localhost' dbname='postgres' user='postgres' password='password123'",
+            "",
+            "",
+            "host='nawalcube.c5eo06dso01d.ap-south-1.rds.amazonaws.com' dbname='nawalcube' user='nawalcube' password='Nirudhi1!'"
+          ]
+
 def mydbfunc(con,cur,command):
     s = 0
     f = None
     t = None
+    
     try:
         cur.execute(command)
     except psycopg2.Error as e:
@@ -42,16 +54,37 @@ def mydbopncon():
         con
     except NameError:
         print("con not defined so assigning as null")
-        conn_string = "host='localhost' dbname='postgres' user='postgres' password='password123'"
-        #conn_string = "host='mysb1.c69yvsbrarzb.us-east-1.rds.amazonaws.com' dbname='mysb1db' user='natrayan' password='Nirudhi1'"
-        con=psycopg2.connect(conn_string)
+        #conn_string = "host='localhost' dbname='postgres' user='postgres' password='password123'"
+        #conn_string = "host='nawalcube.c5eo06dso01d.ap-south-1.rds.amazonaws.com' dbname='nawalcube' user='nawalcube' password='Nirudhi1!'"
+        conn_string = CON_STR[ENV]
+        print('after conn string')
+        try:
+            print('preparing con')
+            con=psycopg2.connect(conn_string)
+        except Exception as e:
+            print("unable to connect")
+            print(e)
+        finally:
+            print("unable to connect finally")
+        print('con')
+        print(con)
         cur = con.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        print('cur')
+        print(cur)
     else:            
         if con.closed:
-            conn_string = "host='localhost' dbname='postgres' user='postgres' password='password123'"
-            con=psycopg2.connect(conn_string)
-            cur = con.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    
+            #conn_string = "host='localhost' dbname='postgres' user='postgres' password='password123'"
+            #conn_string = "host='nawalcube.c5eo06dso01d.ap-south-1.rds.amazonaws.com' dbname='nawalcube' user='nawalcube' password='Nirudhi1!'"
+            conn_string = CON_STR[ENV]
+            try:
+                print('preparing con')
+                con = psycopg2.connect(conn_string)
+            except Exception as e:
+                print("unable to connect")
+                print(e)
+            else:
+                cur = con.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    print('connection successful')
     return con,cur, s, f
 
 def mydbcloseall(con,cur):
@@ -68,7 +101,7 @@ def mydbbegin(con,cur):
     cur, s, f = mydbfunc(con,cur,command)
     
     if cur.closed == True:
-        s, f = errhand.get_status(s, 200, f, "BEGIN statement execution failed", t , "no")
+        s, f, t = errhand.get_status(s, 200, f, "BEGIN statement execution failed", t , "no")
     else:
         print("BEGIN statment execution successful")
     

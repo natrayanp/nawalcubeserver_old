@@ -30,4 +30,4 @@ def validatetoken(request, needtkn = False):
             else:
                 return None * 3
         else:
-            return userid, entityid, cntryid
+            return userid

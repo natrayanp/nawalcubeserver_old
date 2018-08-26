@@ -7,6 +7,8 @@ def get_status(curstatus,newstatus,curreason, newreason, usermsg, addtousermsg =
                 100  --> data error
                 200  --> db error
                 300  --> both data and db error
+                400 --> User related errors
+                    401 --> User already have active session
     '''
     print('get_status start')
     print('curstatus',curstatus)
@@ -26,6 +28,8 @@ def get_status(curstatus,newstatus,curreason, newreason, usermsg, addtousermsg =
             setstatus = newstatus
         elif curstatus < 300:            
             setstatus = 300
+        elif curstatus > 300:
+            setstatus = newstatus
         elif curstatus == 300:
             setstatus = 300
 
