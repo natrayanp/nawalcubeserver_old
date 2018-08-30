@@ -463,13 +463,22 @@ def signup():
                 sinupadhaar = payload['adhaar']
             else:
                 sinupadhaar = None
-                s, f, t= errhand.get_status(s, 100, f, "No adhaar from client", t, "yes")
-
+                if usercusttype not in ['D','A','T']:                    
+                    s, f, t= errhand.get_status(s, 100, f, "No adhaar from client", t, "yes")
+                    
             if payload.get("pan", None) != None:
                 sinuppan = payload['pan']
             else:
                 sinuppan = None
-                s, f, t= errhand.get_status(s, 100, f, "No pan from client", t, "yes")
+                if usercusttype not in ['D','A','T']:                    
+                    s, f, t= errhand.get_status(s, 100, f, "No pan from client", t, "yes")
+            
+            if payload.get("arn", None) != None:
+                sinuparn = payload['arn']
+            else:
+                sinuparn = None
+                if usercusttype not in ['I']:                    
+                    s, f, t= errhand.get_status(s, 100, f, "No arn from client", t, "yes")
 
             if payload.get("mobile", None) != None:
                 sinupmobile = payload['mobile']
@@ -480,7 +489,7 @@ def signup():
             usertype='W'
             userstatus = 'S'
             cur_time = datetime.now().strftime('%Y%m%d%H%M%S')
-
+            print(sinupadhaar,sinuppan,sinuparn,sinupmobile)
         # firebase auth setup
         print(os.path.dirname(__file__)+'/serviceAccountKey.json')
         try:
@@ -560,16 +569,16 @@ def signup():
             command = cur.mogrify("""
                                     SELECT json_agg(a) FROM (
                                     SELECT l.userid, l.username, l.usertype, l.usercusttype, l.entityid, 
-                                    d.sinupusername, d.sinupadhaar, d.sinuppan, d.sinupmobile, d.sinupemail
+                                    d.sinupusername, d.sinupadhaar, d.sinuppan, d.sinupmobile, d.sinupemail, d.sinuparn
                                     FROM ncusr.userlogin l
                                     LEFT JOIN ncusr.userdetails d ON l.userid = d.userid AND l.entityid = d.entityid
                                     WHERE l.userstatus != 'I'
                                     AND (
-                                            l.userid = %s OR d.sinupadhaar = %s OR d.sinuppan = %s OR d.sinupmobile = %s OR d.sinupemail = %s
+                                            l.userid = %s OR d.sinupadhaar = %s OR d.sinuppan = %s OR sinuparn = %s OR d.sinupmobile = %s OR d.sinupemail = %s
                                         )
                                     AND l.entityid = %s AND l.countryid = %s
                                     ) as a
-                                """,(uid,sinupadhaar,sinuppan,sinupmobile,sinupemail,entityid,cntryid,) )
+                                """,(uid,sinupadhaar,sinuppan,sinuparn,sinupmobile,sinupemail,entityid,cntryid,) )
             print(command)
             cur, s1, f1 = db.mydbfunc(con,cur,command)
             s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
@@ -588,20 +597,29 @@ def signup():
 
             if db_json_rec:
                 for rec in db_json_rec:
-                    if rec['userid'] == userid:
-                        s, f, t= errhand.get_status(s, 100, f, "Userid Already exists", t, "yes") 
+                    if rec['userid'] != '':
+                        if rec['userid'] == userid:
+                            s, f, t= errhand.get_status(s, 100, f, "Userid Already exists", t, "yes")
 
-                    if rec['sinupadhaar'] == sinupadhaar:
-                        s, f, t= errhand.get_status(s, 100, f, "Adhaar Already registered", t, "yes")
-                    
-                    if rec['sinuppan'] == sinuppan:
-                        s, f, t= errhand.get_status(s, 100, f, "PAN Already registered", t, "yes")
-                    
-                    if rec['sinupmobile'] == sinupmobile:
-                        s, f, t= errhand.get_status(s, 100, f, "Mobile Already registered", t, "yes")
+                    if rec['sinupadhaar'] != '':           
+                        if rec['sinupadhaar'] == sinupadhaar:
+                            s, f, t= errhand.get_status(s, 100, f, "Adhaar Already registered", t, "yes")
 
-                    if rec['sinupemail'] == sinupemail:
-                        s, f, t= errhand.get_status(s, 100, f, "Email Already registered", t, "yes")
+                    if rec['sinuppan'] != '':
+                        if rec['sinuppan'] == sinuppan:
+                            s, f, t= errhand.get_status(s, 100, f, "PAN Already registered", t, "yes")
+
+                    if rec['sinuparn'] != '':
+                        if rec['sinuparn'] == sinuppan:
+                            s, f, t= errhand.get_status(s, 100, f, "ARN Already registered", t, "yes")
+
+                    if rec['sinupmobile'] != '':
+                        if rec['sinupmobile'] == sinupmobile:
+                            s, f, t= errhand.get_status(s, 100, f, "Mobile Already registered", t, "yes")
+
+                    if rec['sinupemail'] != '':
+                        if rec['sinupemail'] == sinupemail:
+                            s, f, t= errhand.get_status(s, 100, f, "Email Already registered", t, "yes")
             else:
                 print("no records satifying the current user inputs")
         print(s,f)
@@ -628,9 +646,9 @@ def signup():
 
         if s <= 0:
             command = cur.mogrify("""
-                        INSERT INTO ncusr.userdetails (userid, sinupusername, sinupadhaar, sinuppan, sinupmobile, sinupemail, octime, lmtime, entityid, countryid) 
-                        VALUES (%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
-                        """,(userid, sinupusername, sinupadhaar, sinuppan, sinupmobile, sinupemail, entityid, cntryid,))
+                        INSERT INTO ncusr.userdetails (userid, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, octime, lmtime, entityid, countryid) 
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
+                        """,(userid, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, entityid, cntryid,))
             print(command)
             cur, s1, f1 = db.mydbfunc(con,cur,command)
             s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
