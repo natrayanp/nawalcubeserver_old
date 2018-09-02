@@ -1,4 +1,4 @@
-from . import bp_apifunc
+from . import bp_appfunc
 from flask import redirect, request,make_response, jsonify
 #from flask_cors import CORS, cross_origin
 from nawalcube.common import dbfunc as db
@@ -11,7 +11,7 @@ import hmac
 import binascii
 
 
-@bp_apifunc.route("/appregis",methods=["GET","POST","OPTIONS"])
+@bp_appfunc.route("/appregis",methods=["GET","POST","OPTIONS"])
 def login():
     if request.method=="OPTIONS":
         print("inside login options")
@@ -363,7 +363,7 @@ def create_signature(hastype, more_key_str, key, message):
 
 
 
-@bp_apifunc.route("/appdetail",methods=["POST","OPTIONS"])
+@bp_appfunc.route("/appdetail",methods=["POST","OPTIONS"])
 def appdetail():
     if request.method=="OPTIONS":
         print("inside login options")
