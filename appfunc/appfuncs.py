@@ -3,13 +3,14 @@ from flask import redirect, request,make_response, jsonify
 #from flask_cors import CORS, cross_origin
 from nawalcube.common import dbfunc as db
 from nawalcube.common import error_logics as errhand
-from nawalcube.common import jwtdecodenoverify as jwtnv
+from nawalcube.common import jwtfuncs as jwtf
 from datetime import datetime
 import os
 import hashlib
 import hmac
 import binascii
-
+import string
+import random
 
 @bp_appfunc.route("/appregis",methods=["GET","POST","OPTIONS"])
 def login():
@@ -22,7 +23,7 @@ def login():
         print(payload)
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-        userid = jwtnv.validatetoken(request, needtkn = False)
+        userid = jwtf.decodetoken(request, needtkn = False)
         entityid = request.headers.get("entityid", None)
         cntryid = request.headers.get("countryid", None)
         
@@ -193,8 +194,9 @@ def app_register(criteria_json):
     i = 0
     if s <= 0 and operation == "create":
         while i < 50:
-            appid = create_signature("sha256", "nirunidhaappid" + str(i), userid + cur_time, userid)
-            appkey = create_signature("md5", "nirunidhaappkey" + str(i), userid + cur_time, userid)
+            r = ''.join(random.choice(string.ascii_letters + string.digits) for x in range(6))
+            appid = create_signature("sha256", "nirunidhaappid" + r, userid + cur_time, userid)
+            appkey = create_signature("md5", "nirunidhaappkey" + r, userid + cur_time, userid)
 
             command = cur.mogrify("""
                                     SELECT count(1)
@@ -375,7 +377,7 @@ def appdetail():
         print(payload)
         print("---------------------3443-----")
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        userid = jwtnv.validatetoken(request, needtkn = False)
+        userid = jwtf.decodetoken(request, needtkn = False)
         entityid = request.headers.get("entityid", None)
         cntryid = request.headers.get("countryid", None)
         #appid = payload.get("appid", None)

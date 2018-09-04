@@ -3,7 +3,7 @@ from flask import redirect, request,make_response, jsonify
 #from flask_cors import CORS, cross_origin
 from nawalcube.common import dbfunc as db
 from nawalcube.common import error_logics as errhand
-from nawalcube.common import jwtdecodenoverify as jwtnv
+from nawalcube.common import jwtfuncs as jwtf
 from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials
@@ -58,7 +58,7 @@ def login_common(request, site):
     res_to_send = 'fail'
     print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-    userid = jwtnv.validatetoken(request, needtkn = False)
+    userid = jwtf.decodetoken(request, needtkn = False)
     entityid = request.headers.get("entityid", None)
     cntryid = request.headers.get("countryid", None)
 
@@ -214,7 +214,7 @@ def loginsk_common(request, site):
     res_to_send = 'fail'
     print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-    userid = jwtnv.validatetoken(request, needtkn = False)
+    userid = jwtf.decodetoken(request, needtkn = False)
     entityid = request.headers.get("entityid", None)
     cntryid = request.headers.get("countryid", None)
 
@@ -348,7 +348,7 @@ def logout_common(request, site):
     res_to_send = 'fail'
     print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-    userid = jwtnv.validatetoken(request, needtkn = False)
+    userid = jwtf.decodetoken(request, needtkn = False)
     entityid = request.headers.get("entityid", None)
     cntryid = request.headers.get("countryid", None)
     sh = request.headers.get("mysession", None)
@@ -438,7 +438,7 @@ def signup():
         print(payload)
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     
-        token, userid, entityid, cntryid = jwtnv.validatetoken(request, needtkn = True)
+        token, userid, entityid, cntryid = jwtf.decodetoken(request, needtkn = True)
         print('iamback')
         print(token)
         print(userid)
