@@ -10,6 +10,7 @@ import hashlib
 import hmac
 import binascii
 import jwt
+import requests
 
 
 @bp_appfunc.route("/appauth",methods=["GET","POST","OPTIONS"])
@@ -19,7 +20,7 @@ def appauth():
     #       1) in payload authtoken, apiid , apikey & redirecturi are mandatory
     #       2) in header countryid and entityid
     # Output --> 2
-    #       1) success : {'passtkn': password token} 
+    #       1) success : jwt will be sent {'passtkn': password token} 
     #       2) error: {"errormessage": response["usrmsg"]}
     # {value: 'I', viewValue: 'Investor'}, 
     # {value: 'D', viewValue: 'Distributor (MFD)'}, 
@@ -153,18 +154,31 @@ def app_appauth(criteria_json):
             pass            
     
     print(s,f)
-
     appuserid = app_db_rec.get("appuserid", None)
+    
+    if app_db_rec["appusertype"] == "D":
+        useridts = appuserid
+    elif app_db_rec["appusertype"] == "A":
+        useridts = appuserid
+    elif app_db_rec["appusertype"] == "P":
+        useridts = appuserid
+    elif app_db_rec["appusertype"] == "I":
+        useridts = appuserid
+    elif app_db_rec["appusertype"] == "T":
+        useridts = appuserid
+
+
+
     if s <= 0:
         command = cur.mogrify("""
                             SELECT json_agg(a) FROM (
                             SELECT *
                             FROM ncusr.userauth
                             WHERE tknexpiry >= CURRENT_TIMESTAMP
-                            AND userid = %s AND userauthtkn = %s
+                            AND userid = %s AND userauthtkn = %s AND appid = %s
                             AND entityid = %s AND countryid = %s
                             ) as a
-                        """,(appuserid, userauthtkn, entityid, cntryid,) )
+                        """,(useridts, userauthtkn, appid, entityid, cntryid,) )
         print(command)
         cur, s1, f1 = db.mydbfunc(con,cur,command)
         s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
@@ -253,7 +267,7 @@ def app_appauth(criteria_json):
             command = cur.mogrify("""
                         UPDATE ncusr.appdetail SET passwordtkn = %s, passwordtknexpiry = %(timestamp)s, lmtime = CURRENT_TIMESTAMP
                         WHERE  appid =%s AND userid = %s AND entityid = %s AND countryid = %s;
-                        """,(pass_tkn, {'timestamp': passexpiry.datetime.strptime(t,'%d-%m-%YT%H:%M:%S'), appid, userid, entityid, cntryid,))
+                        """,(pass_tkn, {'timestamp': passexpiry.datetime.strptime(t,'%d-%m-%YT%H:%M:%S')}, appid, userid, entityid, cntryid,))
             print(command)
 
             cur, s1, f1 = db.mydbfunc(con,cur,command)
@@ -334,3 +348,43 @@ def get_expiry_time(ut) -> datetime:
         et = reference_time.replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1,microseconds=-1)       
         #Example et value 2018-09-04 23:59:59.999999
     return et
+
+
+@bp_appfunc.route("/receive",methods=["GET","POST","OPTIONS"])
+def testapp():
+    if request.method=="OPTIONS":
+        print("inside receive options")
+        return "inside login options"
+
+    elif request.method=="POST":
+        print("inside receive POST")
+        username = request.args.get('request')
+        return "inside login POST"
+    
+    elif request.method=="GET":
+        print("inside receive GET")
+        print(request)
+        print(request.args)
+        code = request.args.get('request')
+        print(code)
+        return redirect('https://api.upstox.com/index/dialog/authorize?apiKey=9Rt7ZkV5TM8HaFVZN4bi03f86JDWft6E4hu5Krpl&redirect_uri=http://127.0.0.1:4200/upstox&response_type=code', code=302)
+        #return "inside login GET"
+
+@bp_appfunc.route("/toups",methods=["GET","POST","OPTIONS"])
+def toups():
+    if request.method=="OPTIONS":
+        print("inside toups options")
+        return "inside toups options"
+
+    elif request.method=="POST":
+        print("inside toups POST")
+        username = request.args.get('code')
+        return "inside toups POST"
+    
+    elif request.method=="GET":
+        print("inside toups GET")
+        #response = requests.get('http://localhost:8080/receive?request=code&appid=a90b11296963e76638fd0ac4f7915a2c3bbb26295b84cfa0a514ef6793e76165&redirecturi=http://127.0.0.1:8080/testapp')
+        #print(response.history)
+        #url = 'https://wuob9hr3o3.execute-api.ap-south-1.amazonaws.com/dev/receive?request=code&appid=a90b11296963e76638fd0ac4f7915a2c3bbb26295b84cfa0a514ef6793e76165&redirecturi=http://127.0.0.1:8080/testapp';
+        #return redirect(url, code=302)
+        return redirect('https://api.upstox.com/index/dialog/authorize?apiKey=9Rt7ZkV5TM8HaFVZN4bi03f86JDWft6E4hu5Krpl&redirect_uri=http://127.0.0.1:4200/upstox&response_type=code', code=302)

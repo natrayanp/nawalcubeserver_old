@@ -15,8 +15,7 @@ from nawalcube.flows import flow
 from nawalcube.authentication import bp_auth, bp_login
 from nawalcube.authentication import auth
 from nawalcube.authentication import login
-from nawalcube.appfunc import appfuncs, bp_appfunc
-
+from nawalcube.appfunc import appfuncs, appauth, bp_appfunc
 
 app.register_blueprint(bp_flow)
 app.register_blueprint(bp_auth)
