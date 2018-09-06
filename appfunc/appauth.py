@@ -387,4 +387,4 @@ def toups():
         #print(response.history)
         #url = 'https://wuob9hr3o3.execute-api.ap-south-1.amazonaws.com/dev/receive?request=code&appid=a90b11296963e76638fd0ac4f7915a2c3bbb26295b84cfa0a514ef6793e76165&redirecturi=http://127.0.0.1:8080/testapp';
         #return redirect(url, code=302)
-        return redirect('https://api.upstox.com/index/dialog/authorize?apiKey=9Rt7ZkV5TM8HaFVZN4bi03f86JDWft6E4hu5Krpl&redirect_uri=http://127.0.0.1:4200/upstox&response_type=code', code=302)
+        #return redirect('https://api.upstox.com/index/dialog/authorize?apiKey=9Rt7ZkV5TM8HaFVZN4bi03f86JDWft6E4hu5Krpl&redirect_uri=http://127.0.0.1:4200/upstox&response_type=code', code=302)

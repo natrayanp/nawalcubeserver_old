@@ -4,13 +4,13 @@ from nawalcube.common import error_logics as errhand
 import psycopg2
 import psycopg2.extras
 
-ENV = 0
+ENV = 1
 # 0 - DEV
-# 1- SIT
+# 1- HEROKU
 # 2 - UAT
 # 3 - PROD
 CON_STR = ["host='localhost' dbname='postgres' user='postgres' password='password123'",
-            "",
+            "host='ec2-184-72-247-70.compute-1.amazonaws.com' dbname='dcvpcbdidm2qi3' user='gneloudcsniiwt' password='ef1a64d9ff9818e190a8ab931710e7c0b984f2c93b69120f84a42d3d01f06ddf'",
             "",
             "host='nawalcube.c5eo06dso01d.ap-south-1.rds.amazonaws.com' dbname='nawalcube' user='nawalcube' password='Nirudhi1!'"
           ]
