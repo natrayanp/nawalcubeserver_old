@@ -1,9 +1,9 @@
 from . import bp_appfunc
 from flask import redirect, request,make_response, jsonify
 #from flask_cors import CORS, cross_origin
-from nawalcube.common import dbfunc as db
-from nawalcube.common import error_logics as errhand
-from nawalcube.common import jwtfuncs as jwtf
+from nawalcube_server.common import dbfunc as db
+from nawalcube_server.common import error_logics as errhand
+from nawalcube_server.common import jwtfuncs as jwtf
 from datetime import datetime
 import os
 import hashlib
@@ -157,7 +157,7 @@ def app_register(criteria_json):
     if s <= 0:
         command = cur.mogrify("""
                                 SELECT count(1)
-                                FROM ncusr.appdetail a
+                                FROM ncapp.appdetail a
                                 WHERE delflg != 'Y'
                                 AND (
                                         appname = %s
@@ -200,7 +200,7 @@ def app_register(criteria_json):
 
             command = cur.mogrify("""
                                     SELECT count(1)
-                                    FROM ncusr.appdetail
+                                    FROM ncapp.appdetail
                                     WHERE delflg != 'Y'
                                     AND (
                                             appid = %s OR appkey = %s
@@ -245,7 +245,7 @@ def app_register(criteria_json):
 
         if s <= 0:
             command = cur.mogrify("""
-                        INSERT INTO ncusr.appdetail (appname, appusertype, redirecturi, postbackuri, description, starmfdet, appid, appkey, expirydate, product, delflg, userid, octime, lmtime, entityid, countryid) 
+                        INSERT INTO ncapp.appdetail (appname, appusertype, redirecturi, postbackuri, description, starmfdet, appid, appkey, expirydate, product, delflg, appuserid, octime, lmtime, entityid, countryid) 
                         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,CURRENT_DATE + INTERVAL'1 month', %s, 'N',%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
                         """,(appname, appusertype, redirecturi, postbackuri, description, starmfdet, appid, appkey, product, userid, entityid, cntryid,))
             print(command)
@@ -272,8 +272,8 @@ def app_register(criteria_json):
 
         if s <= 0:
             command = cur.mogrify("""
-                        UPDATE ncusr.appdetail SET redirecturi = %s, postbackuri = %s, description = %s, starmfdet = %s, lmtime = CURRENT_TIMESTAMP
-                        WHERE  appname = %s AND appusertype = %s AND appid =%s AND appkey = %s AND product = %s AND userid = %s AND entityid = %s AND countryid = %s;
+                        UPDATE ncapp.appdetail SET redirecturi = %s, postbackuri = %s, description = %s, starmfdet = %s, lmtime = CURRENT_TIMESTAMP
+                        WHERE  appname = %s AND appusertype = %s AND appid =%s AND appkey = %s AND product = %s AND appuserid = %s AND entityid = %s AND countryid = %s;
                         """,(redirecturi, postbackuri, description, starmfdet, appname, appusertype, appid, appkey, product, userid, entityid, cntryid,))
             print(command)
             print(appname,appusertype,redirecturi,postbackuri,description,starmfdet,userid)
@@ -301,8 +301,8 @@ def app_register(criteria_json):
 
         if s <= 0:
             command = cur.mogrify("""
-                        UPDATE ncusr.appdetail SET delflg = 'Y', lmtime = CURRENT_TIMESTAMP
-                        WHERE  appname = %s AND appusertype = %s AND appid =%s AND appkey = %s AND product = %s AND userid = %s AND entityid = %s AND countryid = %s;
+                        UPDATE ncapp.appdetail SET delflg = 'Y', lmtime = CURRENT_TIMESTAMP
+                        WHERE  appname = %s AND appusertype = %s AND appid =%s AND appkey = %s AND product = %s AND appuserid = %s AND entityid = %s AND countryid = %s;
                         """,(appname, appusertype, appid, appkey, product, userid, entityid, cntryid,))
             print(command)
             print(appname,appusertype,redirecturi,postbackuri,description,starmfdet,userid)
@@ -366,6 +366,7 @@ def create_signature(hastype, more_key_str, key, message):
 
 
 @bp_appfunc.route("/appdetail",methods=["POST","OPTIONS"])
+@bp_appfunc.route("/appnldetail",methods=["POST","OPTIONS"])
 def appdetail():
     if request.method=="OPTIONS":
         print("inside login options")
@@ -404,19 +405,36 @@ def appdetail():
 
 
 def app_detail_fetch(criteria_json):
+# Payload structure
+# payload = {'appid': xyz, 'login': <[noauth] to get data without user id>}
+# entity id and country id will come in header which are mandatory
+# user id comes in jwt
+
     print("inside app_detail_fetch common function")
     s = 0
     f = None
     t = None #message to front end
     payload = criteria_json.get("payload",None)
     print(payload)
-    if s <= 0:
-        if criteria_json.get("userid", None) != None:
-            userid = criteria_json['userid']
-        else:
-            userid = None
-            s, f, t= errhand.get_status(s, 100, f, "user id not provided", t, "yes")
 
+    if s <= 0:
+        if payload == None:
+            appid = None
+            login = None
+            # s, f, t= errhand.get_status(s, 100, f, "no payload provided", t, "yes")
+        else:
+            if payload.get("appid", None) != None:
+                appid = payload['appid']
+            else:
+                appid = None
+
+            if payload.get("login", None) != None:
+                login = payload['login']
+            else:
+                login = None
+        print(appid, login, s)
+    
+    if s <= 0:
         if criteria_json.get("entityid", None) != None:
             entityid = criteria_json['entityid']
         else:
@@ -429,15 +447,17 @@ def app_detail_fetch(criteria_json):
             cntryid = None
             s, f, t= errhand.get_status(s, 100, f, "cntry code is not provided", t, "yes")
 
-        if payload == None:
-            appid = None
-        else:
-            if payload.get("appid", None) != None:
-                appid = payload['appid']
+        if login != "nologin":
+            if criteria_json.get("userid", None) != None:
+                userid = criteria_json['userid']
             else:
-                appid = None
-                #s, f, t= errhand.get_status(s, 100, f, "cntry code is not provided", t, "yes")
-        
+                # To get app details before login for entity and cntry
+                userid = None
+                s, f, t= errhand.get_status(s, 100, f, "user id not provided", t, "yes")
+        else:
+                userid = None
+                
+       
     if s <= 0:
         con, cur, s1, f1 = db.mydbopncon()
         s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
@@ -445,22 +465,31 @@ def app_detail_fetch(criteria_json):
         
 
     if s <= 0:
-        if appid != None:
+        if appid == None:
             command = cur.mogrify("""
                                     SELECT json_agg(a) FROM (
-                                    SELECT * FROM ncusr.appdetail                                
-                                    WHERE userid = %s AND entityid = %s AND countryid = %s AND appid = %s
-                                    AND delflg = 'N'
-                                    ) as a
-                                """,(userid,entityid,cntryid,appid,))
-        else:            
-            command = cur.mogrify("""
-                                    SELECT json_agg(a) FROM (
-                                    SELECT * FROM ncusr.appdetail                                
-                                    WHERE userid = %s AND entityid = %s AND countryid = %s
+                                    SELECT * FROM ncapp.appdetail                                
+                                    WHERE appuserid = %s AND entityid = %s AND countryid = %s
                                     AND delflg = 'N'
                                     ) as a
                                 """,(userid,entityid,cntryid,))
+        elif userid == None:
+            command = cur.mogrify("""
+                                    SELECT json_agg(a) FROM (
+                                    SELECT * FROM ncapp.appdetail                                
+                                    WHERE appid = %s AND entityid = %s AND countryid = %s
+                                    AND delflg = 'N'
+                                    ) as a
+                                """,(appid,entityid,cntryid,))
+        else:
+            command = cur.mogrify("""
+                                    SELECT json_agg(a) FROM (
+                                    SELECT * FROM ncapp.appdetail                                
+                                    WHERE appuserid = %s AND entityid = %s AND countryid = %s AND appid = %s
+                                    AND delflg = 'N'
+                                    ) as a
+                                """,(userid,entityid,cntryid,appid,))
+
         print(command)
         cur, s1, f1 = db.mydbfunc(con,cur,command)
         s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
@@ -498,3 +527,74 @@ def app_detail_fetch(criteria_json):
     print(res_to_send, response)
     
     return (res_to_send, response)
+
+
+#http://localhost:8080/appsignup?type=signup&appid=12323235565656&home=http://localhost:4200
+
+@bp_appfunc.route("/ncappsignup",methods=["GET","POST","OPTIONS"])
+def appregresp():
+    if request.method=="OPTIONS":
+        print("inside appregresp options")
+        return "inside appregresp options"
+
+    elif request.method=="GET":
+        print("inside appregresp post")
+        payload = request.args
+        #payload = request.get_json()
+        print(payload)
+        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    
+        criteria_json = {
+            "userid"   : None,
+            "entityid" : 'NAWALCUBE',
+            "cntryid"  : 'IN',
+            "payload" : payload
+        }
+        res_to_send, appname = other_app_register(criteria_json)
+
+        if res_to_send == 'success':
+            return redirect("http://localhost:4201/login/signup?type=signup&appid="+payload["appid"]+"&appname="+appname["appname"]+"&home="+payload["home"], code=302)
+            # resps = make_response(jsonify(response), 200)
+            # resps = make_response(jsonify(response), 200 if res_to_send == 'success' else 400)
+        else:
+            resps = make_response(jsonify('fail'), 400)        
+            #return resps
+            return redirect(payload["redirecturi"]+"?type=signup&regdata=401", code=302)
+
+def other_app_register(criteria_json):
+    print("inside login GET")
+    s = 0
+    f = None
+    t = None #message to front end
+    ret_resp_data = None
+    res_to_send = 'fail'
+    parameters = criteria_json.get("payload",None)
+    print(parameters['type'])
+    payload = {
+        'appid':  parameters['appid'],
+        'login':  'nologin'
+    }
+    print(payload)
+    print(criteria_json)
+    criteria_json = {
+            "userid"   : None,
+            "entityid" : criteria_json['entityid'],
+            "cntryid"  : criteria_json['cntryid'],
+            "payload" : payload
+        }
+    resp_status, app_data = app_detail_fetch(criteria_json)
+
+    #resp_status = "success"#testcode
+    #app_data["result_data"] = {"appname": "kumar"}#testcode
+    
+    if resp_status == "success":
+        if app_data["result_data"] != None:
+            app_details = app_data["result_data"]
+            res_to_send = "success"
+            ret_resp_data = {"appname": app_details["appname"]}
+
+    return res_to_send, ret_resp_data
+
+def other_app_regi_resp(resp_data):
+    return 'success','ok'

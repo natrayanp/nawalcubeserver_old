@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from nawalcube.common import dbfunc as db
-from nawalcube.common import error_logics as errhand
+from nawalcube_server.common import dbfunc as db
+from nawalcube_server.common import error_logics as errhand
 
 import jwt
 import requests
