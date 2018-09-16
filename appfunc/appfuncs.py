@@ -593,23 +593,22 @@ def other_app_register(criteria_json):
     #app_data["result_data"] = {"appname": "kumar"}#testcode
     print(resp_status, app_data)
     if resp_status == "success":
-        print(app_data["result_data"])
         if app_data["result_data"] != None:
-            print("inside result data")
             app_details = app_data["result_data"][0]
-            res_to_send = "success"
-            ret_resp_data = {"appname": app_details["appname"]}
-            usrmsg = app_data["usrmsg"]
+            if app_details["appusertype"] == "T":
+                res_to_send = "success"
+                ret_resp_data = {"appname": app_details["appname"]}
+                usrmsg = app_data["usrmsg"]
+            else:
+                res_to_send = "fail"
+                usrmsg = "App is not a Trusted app"
         else:
-            usrmsg = "App id not registered with nawalcube"
-    print("out",res_to_send, usrmsg)
+            usrmsg = "This is not a registered app"
     if res_to_send != "success":
-        print("in",res_to_send)
         res_to_send = "fail"
         ret_resp_data = {"usrmsg": usrmsg}
 
     print(res_to_send, ret_resp_data)
-
     return res_to_send, ret_resp_data
 
 
