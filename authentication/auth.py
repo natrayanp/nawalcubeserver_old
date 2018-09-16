@@ -5,7 +5,7 @@ from flask import redirect, request,make_response, jsonify
 from nawalcube_server.common import dbfunc as db
 from nawalcube_server.common import error_logics as errhand
 from nawalcube_server.common import jwtfuncs as jwtf
-from datetime import datetime
+from datetime import datetime, timedelta
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import auth
@@ -105,7 +105,7 @@ def fn_appname(criteria_json):
         command = cur.mogrify("""
                                 SELECT json_agg(a) FROM (
                                 SELECT *
-                                FROM ncusr.appdetail
+                                FROM ncapp.appdetail
                                 WHERE delflg != 'Y' AND expirydate >= CURRENT_DATE
                                 AND appid = %s AND redirecturi = %s
                                 AND entityid = %s AND countryid = %s
@@ -204,6 +204,21 @@ def userauth():
         return resps
 
 def app_userauth(criteria_json):
+    # input 
+    #   criteria_json = {
+    #        "entityid" : entityid,
+    #        "cntryid"  : cntryid,
+    #        "payload" : payload  => {appid,redirecturi,userid}
+    #   }
+    # Output
+    #    response = {
+    #                'result_data' : result_data, => succ-> {'authtkn': auth_tkn} : err->[]
+    #                'status': res_to_send, => success/fail
+    #                'status_code': 0, 
+    #                'usrmsg': "Token generation successful" <=for success:  error msg in case of error
+    #    }
+    
+    
     print("inside userauth function")
     s = 0
     f = None
@@ -230,19 +245,19 @@ def app_userauth(criteria_json):
             s, f, t= errhand.get_status(s, 100, f, "App data not sent.  Please try again", t, "yes")
         else:
             if payload.get("appid", None) != None:
-                appid = criteria_json['appid']
+                appid = payload['appid']
             else:
                 appid = None
                 s, f, t= errhand.get_status(s, 100, f, "app id not provided", t, "yes")
 
             if payload.get("redirecturi", None) != None:
-                redirecturi = criteria_json['redirecturi']
+                redirecturi = payload['redirecturi']
             else:
                 redirecturi = None
                 s, f, t= errhand.get_status(s, 100, f, "redirecturi is not provided", t, "yes")
 
             if payload.get("userid", None) != None:
-                userid = criteria_json['userid']
+                userid = payload['userid']
             else:
                 userid = None
                 s, f, t= errhand.get_status(s, 100, f, "userid is not provided", t, "yes")
@@ -260,7 +275,7 @@ def app_userauth(criteria_json):
         command = cur.mogrify("""
                                 SELECT json_agg(a) FROM (
                                 SELECT *
-                                FROM ncusr.appdetail
+                                FROM ncapp.appdetail
                                 WHERE delflg != 'Y' AND expirydate >= CURRENT_DATE
                                 AND appid = %s AND redirecturi = %s
                                 AND entityid = %s AND countryid = %s
@@ -282,8 +297,9 @@ def app_userauth(criteria_json):
     if s <= 0:
         app_db_rec = cur.fetchall()[0][0]
         print(app_db_rec)
+        print(len(app_db_rec))
     
-        if app_db_rec == None or len(app_db_rec) > 0:
+        if app_db_rec == None or len(app_db_rec) < 1:
             s, f, t= errhand.get_status(s, 100, f, "Unable to locate the app id", t, "yes")            
         else:
             app_db_rec = app_db_rec[0]
@@ -297,7 +313,7 @@ def app_userauth(criteria_json):
         command = cur.mogrify("""
                             SELECT json_agg(a) FROM (
                             SELECT *
-                            FROM ncusr.userdetails
+                            FROM ncusr.userlogin
                             WHERE userid = %s
                             AND entityid = %s AND countryid = %s
                             ) as a
@@ -319,7 +335,7 @@ def app_userauth(criteria_json):
         usr_db_rec = cur.fetchall()[0][0]
         print(usr_db_rec)
 
-        if usr_db_rec == None or len(usr_db_rec) > 1:
+        if usr_db_rec == None or len(usr_db_rec) < 1:
             s, f, t= errhand.get_status(s, 100, f, "Unable to locate the user details", t, "yes")            
         else:
             usr_db_rec = usr_db_rec[0]
@@ -327,10 +343,10 @@ def app_userauth(criteria_json):
             pass            
     
     if s <= 0:
-        if usr_db_rec["userstatus"] != 'B':
+        if usr_db_rec["userstatus"] == 'B':
             #B-Blocked , I-Deleteduser
             s, f, t= errhand.get_status(s, 100, f, "User is blocked", t, "yes")
-        elif usr_db_rec["userstatus"] != 'I':
+        elif usr_db_rec["userstatus"] == 'I':
             #B-Blocked , I-Deleteduser
             s, f, t= errhand.get_status(s, 100, f, "User is Deleted", t, "yes")
 
@@ -349,8 +365,8 @@ def app_userauth(criteria_json):
 
             command = cur.mogrify("""
                                     SELECT count(1)
-                                    FROM ncusr.userapplogin
-                                    WHERE authtkn = %s
+                                    FROM ncusr.userauth
+                                    WHERE userauthtkn = %s
                                 """,(auth_tkn,) )
             print(command)
             cur, s1, f1 = db.mydbfunc(con,cur,command)
@@ -384,6 +400,7 @@ def app_userauth(criteria_json):
     print(s,f, t)
 
     appusrtype = app_db_rec.get("appusertype", None)
+
     if appusrtype == None:
         s, f, t= errhand.get_status(s, 200, f, "app user type is not known", t, "yes")
 
@@ -394,16 +411,17 @@ def app_userauth(criteria_json):
         s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
         s1, f1 = 0, None
 
-        if s <= 0:
-            passexpiry = get_expiry_time(appusrtype)
 
+        if s <= 0:
+            passexpiry = get_expiry_time("authtkn", appusrtype)
+            # VALUES(%s, %s, %s, %(timestamp)s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             command = cur.mogrify("""
                         INSERT into ncusr.userauth (userid,appid,userauthtkn,tknexpiry,entityid,countryid,octime,lmtime)
-                        VALUES(%s, %s, %s, %s, %(timestamp)s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        VALUES(%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                         ON CONFLICT ON CONSTRAINT unq_comb_uauth
                         DO
                             UPDATE SET userauthtkn = %s, tknexpiry = %s, lmtime = CURRENT_TIMESTAMP 
-                        """,(userid, appid, auth_tkn, {'timestamp': passexpiry.datetime.strptime(t,'%d-%m-%YT%H:%M:%S')}, entityid, cntryid, auth_tkn, {'timestamp': passexpiry.datetime.strptime(t,'%d-%m-%YT%H:%M:%S')},))
+                        """,(userid, appid, auth_tkn, passexpiry, entityid, cntryid, auth_tkn, passexpiry,))
             print(command)
 
             cur, s1, f1 = db.mydbfunc(con,cur,command)
@@ -454,6 +472,8 @@ def create_signature(hastype, more_key_str, key, message):
 
 
 def get_expiry_time(tkn_type, ut) -> datetime:
+    print(tkn_type, ut)
+    et = None
     if tkn_type == "authtkn":
         # Set the app token expiry based on the user type
         # I - Investor - 1 day
@@ -462,16 +482,18 @@ def get_expiry_time(tkn_type, ut) -> datetime:
         # P - Portfolio tool - 1 hour
         # T - Trusted app - 1 hour
         if ut == 'I':
-            et = datetime.datetime.now() + datetime.timedelta(hours=1)
+            et = datetime.now() + timedelta(hours=1)
         elif ut == 'D':
-            et = datetime.datetime.now() + datetime.timedelta(hours=1)
+            et = datetime.now() + timedelta(hours=1)
         elif ut == 'A':
-            et = datetime.datetime.now() + datetime.timedelta(hours=1)
+            et = datetime.now() + timedelta(hours=1)
         elif ut == 'P':
-            et = datetime.datetime.now() + datetime.timedelta(hours=1)
+            et = datetime.now() + timedelta(hours=1)
         elif ut == 'T':
-            reference_time = datetime.datetime.now()
-            et = reference_time.replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1,microseconds=-1)       
+            reference_time = datetime.now()
+            print(reference_time)
+            et = reference_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1,microseconds=-1)       
+            print(et)
             #Example et value 2018-09-04 23:59:59.999999
     elif tkn_type == "passtkn":
         # Set the user token expiry based on the user type
@@ -481,15 +503,17 @@ def get_expiry_time(tkn_type, ut) -> datetime:
         # P - Portfolio tool - 1 day
         # T - Trusted app - no Expiry
         if ut == 'I':
-            reference_time = datetime.datetime.now()
-            et = reference_time.replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1,microseconds=-1) 
+            reference_time = datetime.now()
+            et = reference_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1,microseconds=-1) 
         elif ut == 'D':
-            et = datetime.datetime.now() + datetime.timedelta(years=100)
+            et = datetime.now() + timedelta(years=100)
         elif ut == 'A':
-            et = datetime.datetime.now() + datetime.timedelta(years=100)
+            et = datetime.now() + timedelta(years=100)
         elif ut == 'P':
-            reference_time = datetime.datetime.now()
-            et = reference_time.replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1,microseconds=-1) 
+            reference_time = datetime.now()
+            et = reference_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1,microseconds=-1) 
         elif ut == 'T':            
-            et = datetime.datetime.now() + datetime.timedelta(years=100)   
+            et = datetime.now() + timedelta(years=100)
+    print(et)
     return et
+    #return et.strftime('%d-%m-%YT%H:%M:%S')

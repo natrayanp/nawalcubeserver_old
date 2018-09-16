@@ -4,7 +4,12 @@ from flask import redirect, request,make_response, jsonify
 from nawalcube_server.common import dbfunc as db
 from nawalcube_server.common import error_logics as errhand
 from nawalcube_server.common import jwtfuncs as jwtf
+from nawalcube_server.common import serviceAccountKey as sak
+from nawalcube_server.authentication import auth as myauth
 from datetime import datetime
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import auth
 import os
 import hashlib
 import hmac
@@ -162,7 +167,7 @@ def app_register(criteria_json):
                                 AND (
                                         appname = %s
                                     )
-                                AND userid = %s AND entityid = %s AND countryid = %s
+                                AND appuserid = %s AND entityid = %s AND countryid = %s
                             """,(appname, userid, entityid, cntryid,) )
         print(command)
         cur, s1, f1 = db.mydbfunc(con,cur,command)
@@ -554,16 +559,15 @@ def appregresp():
         res_to_send, appname = other_app_register(criteria_json)
 
         if res_to_send == 'success':
-            return redirect("http://localhost:4201/login/signup?type=signup&appid="+payload["appid"]+"&appname="+appname["appname"]+"&home="+payload["home"], code=302)
+            return redirect("http://localhost:4200/login/signup?type=signup&appid="+payload["appid"]+"&appname="+appname["appname"]+"&home="+payload["home"], code=302)
             # resps = make_response(jsonify(response), 200)
             # resps = make_response(jsonify(response), 200 if res_to_send == 'success' else 400)
         else:
-            resps = make_response(jsonify('fail'), 400)        
-            #return resps
-            return redirect(payload["redirecturi"]+"?type=signup&regdata=401", code=302)
+            print(appname["usrmsg"])
+            return redirect(payload["redirecturi"]+"?type=signup&regdata=401&msg="+appname["usrmsg"], code=302)
 
 def other_app_register(criteria_json):
-    print("inside login GET")
+    print("inside other_app_register")
     s = 0
     f = None
     t = None #message to front end
@@ -584,17 +588,106 @@ def other_app_register(criteria_json):
             "payload" : payload
         }
     resp_status, app_data = app_detail_fetch(criteria_json)
-
+    usrmg = None
     #resp_status = "success"#testcode
     #app_data["result_data"] = {"appname": "kumar"}#testcode
-    
+    print(resp_status, app_data)
     if resp_status == "success":
+        print(app_data["result_data"])
         if app_data["result_data"] != None:
-            app_details = app_data["result_data"]
+            print("inside result data")
+            app_details = app_data["result_data"][0]
             res_to_send = "success"
             ret_resp_data = {"appname": app_details["appname"]}
+            usrmsg = app_data["usrmsg"]
+        else:
+            usrmsg = "App id not registered with nawalcube"
+    print("out",res_to_send, usrmsg)
+    if res_to_send != "success":
+        print("in",res_to_send)
+        res_to_send = "fail"
+        ret_resp_data = {"usrmsg": usrmsg}
+
+    print(res_to_send, ret_resp_data)
 
     return res_to_send, ret_resp_data
 
+
+@bp_appfunc.route("/ncappsingupres",methods=["GET","POST","OPTIONS"])
+def ncappsingupres():
+    if request.method=="OPTIONS":
+        print("inside ncappsingupres options")
+        return "inside ncappsingupres options"
+
+    elif request.method=="POST":
+        print("inside ncappsingupres get")
+        payload = request.get_json()
+        print(payload)
+        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+        # firebase auth setup
+        try:
+            print('inside try')
+            default_app = firebase_admin.get_app('natfbappsingup')
+            print('about inside try')
+        except ValueError:
+            print('inside value error')
+            #cred = credentials.Certificate(os.path.dirname(__file__)+'/serviceAccountKey.json')
+            cred = credentials.Certificate(sak.SERVICEAC)
+            default_app = firebase_admin.initialize_app(credential=cred,name='natfbappsingup')
+        else:
+            pass
+
+        print('app ready')        
+        email = payload["email"]            
+        user = auth.get_user_by_email(email,app=default_app)
+        print('Successfully fetched user data: {0}'.format(user.uid))
+        userid = user.uid
+
+        #dtoken = dtoken[0]
+        entityid = request.headers.get("entityid", None)
+        cntryid = request.headers.get("countryid", None)
+        appid = payload["appid"]
+        payload_to = {"appid": appid, "login": "nologin"}
+        criteria_json = {
+            "userid"   : None,
+            "entityid" : entityid,
+            "cntryid"  : cntryid,
+            "payload" : payload_to
+        }
+        resp_status, app_data = app_detail_fetch(criteria_json)
+        app_details = app_data["result_data"][0]
+        usrmsg = None
+
+        if resp_status == "success":
+            if app_data["result_data"] != None:
+                res_to_send = "success"
+                redir_ur = app_details["redirecturi"]
+                usrmsg = app_data["usrmsg"]
+
+        if res_to_send != "success":
+            res_to_send = "fail"
+            redir_ur = app_data["redirecturi"]
+            if app_data["usrmsg"] == '' or app_data["usrmsg"] == None:
+                usrmsg = "App id not registered with nawalcube"
+            else:
+                usrmsg = app_data["usrmsg"]
+
+        if res_to_send == "success":
+            # Generate authtoken for the user as this is trusted app.  
+            # This is to be send by trusted app whenever they communicate
+            criteria_json = {
+                "entityid" : entityid,
+                "cntryid"  : cntryid,
+                "payload" : {"appid": appid,"redirecturi": redir_ur,"userid": userid}
+            }
+            ath_tkn_status, ath_tkn_detail = myauth.app_userauth(criteria_json)
+
+            if ath_tkn_status == "success":
+                return redirect(redir_ur + "?type=signup&regdata={uid:" + userid + ",email:" + email + ",authtkn:" + ath_tkn_detail["result_data"]["authtkn"] + "}&msg=" + usrmsg, code=302)
+
+        if res_to_send != "success" or ath_tkn_status != "success":
+            return redirect(redir_ur + "?type=signup&regdata=401&msg="+ usrmsg, code=302)
+            
 def other_app_regi_resp(resp_data):
     return 'success','ok'

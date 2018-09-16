@@ -29,11 +29,11 @@ def decodetoken(request, needtkn = False):
 
         if needtkn:
             if token:
-                return token, userid, entityid, cntryid
+                return token, natjwtdecoded
             else:
-                return None * 3
+                return None * 2
         else:
-            return userid
+            return natjwtdecoded
 
 def generatejwt(d):
     #Create JWT

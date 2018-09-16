@@ -5,6 +5,7 @@ from nawalcube.common import jwtfuncs as jwtf
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import auth
+from nawalcube_server.common import serviceAccountKey as sak
 
 @bp_apivali.route('/apiaccessvali',methods=['GET','POST','OPTIONS'])
 def apiaccessvali():
@@ -56,7 +57,8 @@ def apiaccessvali_firebase(token):
     print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     
     #firebase auth setup
-    cred = credentials.Certificate('/home/natrayan/project/AwsProject/Python/nawalcubebackend/nawalcube/authentication/serviceAccountKey.json')
+    #cred = credentials.Certificate('/home/natrayan/project/AwsProject/Python/nawalcubebackend/nawalcube/authentication/serviceAccountKey.json')
+    cred = credentials.Certificate(sa.SERVICEAC)
     default_app = firebase_admin.initialize_app(cred)
 
     try:

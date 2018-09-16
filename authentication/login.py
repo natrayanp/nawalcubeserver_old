@@ -4,6 +4,7 @@ from flask import redirect, request,make_response, jsonify
 from nawalcube_server.common import dbfunc as db
 from nawalcube_server.common import error_logics as errhand
 from nawalcube_server.common import jwtfuncs as jwtf
+from nawalcube_server.common import serviceAccountKey as sak
 from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials
@@ -438,7 +439,11 @@ def signup():
         print(payload)
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     
-        token, userid, entityid, cntryid = jwtf.decodetoken(request, needtkn = True)
+        tkn, dtkn = jwtf.decodetoken(request, needtkn = True)
+        token = tkn
+        userid = dtkn["user_id"]
+        entityid = request.headers.get("entityid", None)
+        cntryid = request.headers.get("countryid", None)
         print('iamback')
         print(token)
         print(userid)
@@ -491,14 +496,14 @@ def signup():
             cur_time = datetime.now().strftime('%Y%m%d%H%M%S')
             print(sinupadhaar,sinuppan,sinuparn,sinupmobile)
         # firebase auth setup
-        print(os.path.dirname(__file__)+'/serviceAccountKey.json')
         try:
             print('inside try')
             default_app=firebase_admin.get_app('natfbloginsingupapp')
             print('about inside try')
-        except ValueError:
+        except ValueError:                      
             print('inside value error')
-            cred = credentials.Certificate(os.path.dirname(__file__)+'/serviceAccountKey.json')
+            #cred = credentials.Certificate(os.path.dirname(__file__)+'/serviceAccountKey.json')
+            cred = credentials.Certificate(sak.SERVICEAC)
             default_app = firebase_admin.initialize_app(credential=cred,name='natfbloginsingupapp')
         else:
             pass
