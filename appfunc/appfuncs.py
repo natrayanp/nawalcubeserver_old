@@ -683,7 +683,7 @@ def ncappsingupres():
             ath_tkn_status, ath_tkn_detail = myauth.app_userauth(criteria_json)
 
             if ath_tkn_status == "success":
-                return redirect(redir_ur + "?type=signup&regdata={uid:" + userid + ",email:" + email + ",authtkn:" + ath_tkn_detail["result_data"]["authtkn"] + "}&msg=" + usrmsg, code=302)
+                return redirect(redir_ur + '?type=signup&regdata={"uid":"' + userid + '","email":"' + email + '","authtkn":"' + ath_tkn_detail['result_data']['authtkn'] + '"}&msg=' + usrmsg, code=302)
 
         if res_to_send != "success" or ath_tkn_status != "success":
             return redirect(redir_ur + "?type=signup&regdata=401&msg="+ usrmsg, code=302)
