@@ -191,12 +191,20 @@ def userauth():
             "cntryid"  : cntryid,
             "payload" : payload
         }
-        
+        print("cal @@@@@@@@@@@@@@@@")
         res_to_send, response = app_userauth(criteria_json)
-
+        print("back @@@@@@@@@@@@@@@@@@@@@@@")
+        print(res_to_send, response)
         if res_to_send == "success":
-            response1 = response["result_data"]
-            resps = make_response(jsonify(response1), 200)
+            #response1 = response["result_data"]
+            response1 = make_response(jsonify(response["result_data"]))
+            response1.headers['Access-Control-Allow-Origin'] = "*"
+            response1.headers['Access-Control-Allow-Methods'] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
+            response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
+            resps = response1
+            print("nat")
+            print(resps)
+            #resps = make_response(jsonify(response1), 200)
         else:
             response1 = {"error": response["usrmsg"]}
             resps = make_response(jsonify(response1), 403)

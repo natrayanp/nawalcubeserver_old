@@ -46,15 +46,23 @@ def appauth():
             "cntryid"  : cntryid,
             "payload" : payload
         }
-        
+        print("cal @@@@@@@@@@@@@@@@")
         res_to_send, response = app_appauth(criteria_json)
+        print("back @@@@@@@@@@@@@@@@@@@@@@@")
 
         if res_to_send == "success":
-            response1 = response["result_data"]
+            #response1 = response["result_data"]
+            response1 = make_response(jsonify(response["result_data"]), 200)
+            response1.headers['Access-Control-Allow-Origin'] = "*"
+            response1.headers['Access-Control-Allow-Methods'] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
+            response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
+            resps = response1
+            print("nat")
+            print(resps)
         else:
             response1 = {"errormessage": response["usrmsg"]}
 
-        resps = make_response(jsonify(response1), 200)
+        #resps = make_response(jsonify(response1), 200)
         return resps
 
 def app_appauth(criteria_json):

@@ -1,5 +1,5 @@
 from . import bp_appfunc
-from flask import redirect, request,make_response, jsonify
+from flask import redirect,request,make_response, jsonify
 #from flask_cors import CORS, cross_origin
 from nawalcube_server.common import dbfunc as db
 from nawalcube_server.common import error_logics as errhand
@@ -16,6 +16,7 @@ import hmac
 import binascii
 import string
 import random
+import json
 
 @bp_appfunc.route("/appregis",methods=["GET","POST","OPTIONS"])
 def login():
@@ -616,10 +617,18 @@ def other_app_register(criteria_json):
 def ncappsingupres():
     if request.method=="OPTIONS":
         print("inside ncappsingupres options")
-        return "inside ncappsingupres options"
+        response1 = make_response(jsonify("inside ncappsingupres options"))
+        del response1.headers["entityid"]
+        del response1.headers["countryid"]
+        response1.headers['Origin'] = "http://localhost:4201"
+        response1.headers['Access-Control-Allow-Origin'] = "*"
+        response1.headers['Access-Control-Allow-Methods'] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
+        response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
+
+        return response1
 
     elif request.method=="POST":
-        print("inside ncappsingupres get")
+        print("inside ncappsingupres POST")
         payload = request.get_json()
         print(payload)
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -683,10 +692,37 @@ def ncappsingupres():
             ath_tkn_status, ath_tkn_detail = myauth.app_userauth(criteria_json)
 
             if ath_tkn_status == "success":
-                return redirect(redir_ur + '?type=signup&regdata={"uid":"' + userid + '","email":"' + email + '","authtkn":"' + ath_tkn_detail['result_data']['authtkn'] + '"}&msg=' + usrmsg, code=302)
+                urls = {
+                    "url": 'http://localhost:4201/noti' + '?type=signup&regdata={"uid":"' + userid + '","email":"' + email + '","authtkn":"' + ath_tkn_detail['result_data']['authtkn'] + '"}&msg=' + usrmsg
+                }
+                response1 = make_response(jsonify(urls), 200)
+                '''
+                response1.headers['Access-Control-Allow-Origin'] = "*"
+                response1.headers['Access-Control-Allow-Methods'] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
+                response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
+                response1.headers['Origin'] = "http://localhost:4201"
+                print(response1.headers)
+                #del response1.headers["entityid"]
+                #del response1.headers["countryid"]
+                print(response1.headers)
+                print("end of inside ncappsingupres POST suc")
+                '''
+                print(response1)
+                return response1
+
+                #return redirect(redir_ur + '?type=signup&regdata={"uid":"' + userid + '","email":"' + email + '","authtkn":"' + ath_tkn_detail['result_data']['authtkn'] + '"}&msg=' + usrmsg, code=302)
 
         if res_to_send != "success" or ath_tkn_status != "success":
-            return redirect(redir_ur + "?type=signup&regdata=401&msg="+ usrmsg, code=302)
+            response1 = make_response(redirect(redir_ur + "?type=signup&regdata=401&msg="+ usrmsg, code=302))
+            response1.headers['Origin'] = "http://localhost:4201"
+            response1.headers['Access-Control-Allow-Origin'] = "*"
+            response1.headers['Access-Control-Allow-Methods'] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
+            response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
+
+            #return redirect(redir_ur + "?type=signup&regdata=401&msg="+ usrmsg, code=302)
+            print("end of inside ncappsingupres POST")
+            print(response1)
+            return response1
             
 def other_app_regi_resp(resp_data):
     return 'success','ok'
