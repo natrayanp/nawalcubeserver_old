@@ -692,37 +692,150 @@ def ncappsingupres():
             ath_tkn_status, ath_tkn_detail = myauth.app_userauth(criteria_json)
 
             if ath_tkn_status == "success":
-                urls = {
-                    "url": 'http://localhost:4201/noti' + '?type=signup&regdata={"uid":"' + userid + '","email":"' + email + '","authtkn":"' + ath_tkn_detail['result_data']['authtkn'] + '"}&msg=' + usrmsg
-                }
-                response1 = make_response(jsonify(urls), 200)
-                '''
-                response1.headers['Access-Control-Allow-Origin'] = "*"
-                response1.headers['Access-Control-Allow-Methods'] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
-                response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
-                response1.headers['Origin'] = "http://localhost:4201"
-                print(response1.headers)
-                #del response1.headers["entityid"]
-                #del response1.headers["countryid"]
-                print(response1.headers)
-                print("end of inside ncappsingupres POST suc")
-                '''
-                print(response1)
-                return response1
-
-                #return redirect(redir_ur + '?type=signup&regdata={"uid":"' + userid + '","email":"' + email + '","authtkn":"' + ath_tkn_detail['result_data']['authtkn'] + '"}&msg=' + usrmsg, code=302)
+                details = {
+                        "regisdetails" : 'type=signup&regdata={"uid":"' + userid + '","email":"' + email + '","authtkn":"' + ath_tkn_detail['result_data']['authtkn'] + '"}&msg=' + usrmsg,
+                        "entityid": entityid,
+                        "cntryid" :cntryid,
+                        "userid" :userid
+                    }
+                st, tempkey = other_app_regi_resp(details)
+                
+                if st <= 0:
+                    urls = {
+                    #    "url": 'http://localhost:4201/noti' + '?type=signup&regdata={"uid":"' + userid + '","email":"' + email + '","authtkn":"' + ath_tkn_detail['result_data']['authtkn'] + '"}&msg=' + usrmsg
+                        "url": redir_ur + '?type=signup&regdata='+ tempkey +'&msg=success'
+                    }
+                    response1 = make_response(jsonify(urls), 200)
+                    print(response1)
+                    return response1
+                else:
+                    ath_tkn_status = "fail"
+                    usrmsg = "key generation failed.  Contact support."
 
         if res_to_send != "success" or ath_tkn_status != "success":
-            response1 = make_response(redirect(redir_ur + "?type=signup&regdata=401&msg="+ usrmsg, code=302))
-            response1.headers['Origin'] = "http://localhost:4201"
-            response1.headers['Access-Control-Allow-Origin'] = "*"
-            response1.headers['Access-Control-Allow-Methods'] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
-            response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
-
-            #return redirect(redir_ur + "?type=signup&regdata=401&msg="+ usrmsg, code=302)
+            urls = {
+                     "url": redir_ur + "?type=signup&regdata=401&msg="+ usrmsg
+                    }
+            response1 = make_response(jsonify(urls), 200)
             print("end of inside ncappsingupres POST")
             print(response1)
             return response1
+
             
-def other_app_regi_resp(resp_data):
-    return 'success','ok'
+def other_app_regi_resp(details):
+    print("inside other_app_register")
+    s = 0
+    f = None
+    t = None #message to front end
+    regisdetails = details["regisdetails"]
+    entityid = details["entityid"]
+    cntryid = details["cntryid"]
+    userid = details["userid"]
+    
+    con, cur, s1, f1 = db.mydbopncon()
+    s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
+    s1, f1 = 0, None
+    print("connection statment done", s,f,t)
+
+    i = 0
+    cur_time = datetime.now().strftime('%Y%m%d%H%M%S')
+
+    if s <= 0:
+        while i < 50:
+            r = ''.join(random.choice(string.ascii_letters + string.digits) for x in range(6))
+            tmpkey = create_signature("md5", "nirunidhotpappreg" + r, userid + cur_time, userid)
+            
+
+            command = cur.mogrify("""
+                                    SELECT count(1)
+                                    FROM ncusr.userauth
+                                    WHERE delflg != 'Y'
+                                    AND (
+                                            userauthtkn = %s
+                                        )
+                                """,(tmpkey,) )
+            print(command)
+            cur, s1, f1 = db.mydbfunc(con,cur,command)
+            s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
+            s1, f1 = 0, None
+            print('----------------')
+            print(s)
+            print(f)
+            print('----------------')
+            if s > 0:
+                s, f, t = errhand.get_status(s, 200, f, "user registration temp token fetch failed with DB error", t, "no")
+            print(s,f)
+
+            if s <= 0:
+                db_rec = cur.fetchall()[0][0]
+                print(db_rec)
+            
+                if db_rec > 0:
+                    s, f, t= errhand.get_status(s, 100, f, "tmp token Already exists for retrying time: " + i, t, "no")
+                    i = i + 1
+                    continue
+                else:
+                    print("no records satifying the current user inputs")
+                    tmpkeyset = True
+                    break
+            else:
+                # Some error occured, so no point looping
+                tmpkeyset = False
+                break
+    print(s,f,t)
+
+    if s <= 0 and tmpkeyset:
+        s1, f1 = db.mydbbegin(con, cur)
+        print(s1,f1)
+
+        s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
+        s1, f1 = 0, None
+
+        if s <= 0:
+            command = cur.mogrify("""
+                        INSERT INTO ncusr.appusrregdetail (userid, regisdetails, entityid, countryid, accessedcount, octime, lmtime) 
+                        VALUES (%s,%s,%s,%s,accessedcount + 1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+                        ON CONFLICT WHERE userid = %s AND entityid = %s AND  countryid = %s
+                        DO UPDATE SET regisdetails = %s, accessedcount = accessedcount + 1, lmtime = CURRENT_TIMESTAMP
+                        """,(userid, regisdetails,entityid, cntryid,userid,entityid, cntryid,regisdetails,))
+            print(command)
+            print(userid, regisdetails,entityid, cntryid)
+            cur, s1, f1 = db.mydbfunc(con,cur,command)
+            s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
+            s1, f1 = 0, None
+
+            if s > 0:
+                s, f, t= errhand.get_status(s, 200, f, "SIGNUP user data Insert/update failed", t, "no")
+
+            print('SIGNUP user data Insert/update successful')
+    
+        if s <= 0:
+            con.commit()
+    return s, tmpkey
+
+
+
+'''
+response1.headers['Access-Control-Allow-Origin'] = "*"
+response1.headers['Access-Control-Allow-Methods'] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
+response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
+response1.headers['Origin'] = "http://localhost:4201"
+print(response1.headers)
+#del response1.headers["entityid"]
+#del response1.headers["countryid"]
+print(response1.headers)
+print("end of inside ncappsingupres POST suc")
+'''
+
+
+#return redirect(redir_ur + '?type=signup&regdata={"uid":"' + userid + '","email":"' + email + '","authtkn":"' + ath_tkn_detail['result_data']['authtkn'] + '"}&msg=' + usrmsg, code=302)
+
+'''
+response1 = make_response(redirect(redir_ur + "?type=signup&regdata=401&msg="+ usrmsg, code=302))
+response1.headers['Origin'] = "http://localhost:4201"
+response1.headers['Access-Control-Allow-Origin'] = "*"
+response1.headers['Access-Control-Allow-Methods'] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
+response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
+
+#return redirect(redir_ur + "?type=signup&regdata=401&msg="+ usrmsg, code=302)
+'''

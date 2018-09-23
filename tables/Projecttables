@@ -160,7 +160,15 @@ CREATE TABLE ncapp.appusrauth (
     CONSTRAINT unq_comb_auauth UNIQUE (userauthtkn,appid) 
 );
 
-
+CREATE TABLE ncusr.appusrregdetail (
+    userid 		               varchar(100) NOT NULL REFERENCES ncusr.userlogin(userid),
+    regisdetails               text NOT NULL,
+    entityid                   varchar(20) NOT NULL,
+    countryid                  varchar(10) NOT NULL,
+    accessedcount              smallint NOT NULL,
+    octime			           timestamptz NOT NULL,
+    lmtime			           timestamptz NOT NULL
+);
 
 
 
