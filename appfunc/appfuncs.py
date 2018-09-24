@@ -10,6 +10,8 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import auth
+
+from nawalcube_server.common import configs as config
 import os
 import hashlib
 import hmac
@@ -29,7 +31,8 @@ def login():
         print(payload)
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-        userid = jwtf.decodetoken(request, needtkn = False)
+        dtkn = jwtf.decodetoken(request, needtkn = False)
+        userid = dtkn.get("user_id", None)
         entityid = request.headers.get("entityid", None)
         cntryid = request.headers.get("countryid", None)
         
@@ -384,7 +387,8 @@ def appdetail():
         print(payload)
         print("---------------------3443-----")
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        userid = jwtf.decodetoken(request, needtkn = False)
+        dtkn = jwtf.decodetoken(request, needtkn = False)
+        userid = dtkn.get("user_id", None)
         entityid = request.headers.get("entityid", None)
         cntryid = request.headers.get("countryid", None)
         #appid = payload.get("appid", None)
@@ -411,11 +415,10 @@ def appdetail():
 
 
 def app_detail_fetch(criteria_json):
-# Payload structure
 # payload = {'appid': xyz, 'login': <[noauth] to get data without user id>}
-# entity id and country id will come in header which are mandatory
-# user id comes in jwt
-
+# entity id and country id will come in header which are mandator. user id comes in jwt
+# Output =  { 'result_data' : [success -> ncapp.appdetail] [Failure -> ""]
+#             'status': success/fail,  'status_code': 0,     'usrmsg': ''/error message }
     print("inside app_detail_fetch common function")
     s = 0
     f = None
@@ -538,16 +541,16 @@ def app_detail_fetch(criteria_json):
 #http://localhost:8080/appsignup?type=signup&appid=12323235565656&home=http://localhost:4200
 
 @bp_appfunc.route("/ncappsignup",methods=["GET","POST","OPTIONS"])
-def appregresp():
+def ncappsignup():
     if request.method=="OPTIONS":
-        print("inside appregresp options")
-        return "inside appregresp options"
+        print("inside ncappsignup options")
+        return "inside ncappsignup options"
 
     elif request.method=="GET":
-        print("inside appregresp post")
+        print("inside ncappsignup post")
         payload = request.args
         #payload = request.get_json()
-        print(payload)
+        print("payload",payload)
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
     
@@ -558,14 +561,20 @@ def appregresp():
             "payload" : payload
         }
         res_to_send, appname = other_app_register(criteria_json)
+        # success -->  {"appname": app_details["appname"]}
+        # failure -->  {"usrmsg": usrmsg}
 
         if res_to_send == 'success':
-            return redirect("http://localhost:4200/login/signup?type=signup&appid="+payload["appid"]+"&appname="+appname["appname"]+"&home="+payload["home"], code=302)
+            print(config.SIGNUPURL[config.LIVE])
+            print(payload["appid"])
+            print(appname["appname"])
+            print(payload["home"])
+            return redirect(config.SIGNUPURL[config.LIVE]+"?type=signup&appid="+payload["appid"]+"&appname="+appname["appname"]+"&home="+payload["home"], code=302)
             # resps = make_response(jsonify(response), 200)
             # resps = make_response(jsonify(response), 200 if res_to_send == 'success' else 400)
         else:
             print(appname["usrmsg"])
-            return redirect(payload["redirecturi"]+"?type=signup&regdata=401&msg="+appname["usrmsg"], code=302)
+            return redirect(config.SIGNUPURL[config.LIVE]+"?type=signup&regdata=401&msg="+appname["usrmsg"], code=302)
 
 def other_app_register(criteria_json):
     print("inside other_app_register")
@@ -589,7 +598,8 @@ def other_app_register(criteria_json):
             "payload" : payload
         }
     resp_status, app_data = app_detail_fetch(criteria_json)
-    usrmg = None
+
+    usrmsg = None
     #resp_status = "success"#testcode
     #app_data["result_data"] = {"appname": "kumar"}#testcode
     print(resp_status, app_data)
@@ -600,6 +610,14 @@ def other_app_register(criteria_json):
                 res_to_send = "success"
                 ret_resp_data = {"appname": app_details["appname"]}
                 usrmsg = app_data["usrmsg"]
+                
+                print('app_details["redirecturi"]')
+                print(app_details["redirecturi"])
+                print(parameters["redirecturi"])
+                print('parameters["redirecturi"]')                
+                if app_details["redirecturi"] != parameters["redirecturi"]:
+                    res_to_send = "fail"
+                    usrmsg = "Redirecturi validation failed"
             else:
                 res_to_send = "fail"
                 usrmsg = "App is not a Trusted app"
@@ -617,22 +635,24 @@ def other_app_register(criteria_json):
 def ncappsingupres():
     if request.method=="OPTIONS":
         print("inside ncappsingupres options")
+
         response1 = make_response(jsonify("inside ncappsingupres options"))
+        '''
         del response1.headers["entityid"]
         del response1.headers["countryid"]
         response1.headers['Origin'] = "http://localhost:4201"
         response1.headers['Access-Control-Allow-Origin'] = "*"
         response1.headers['Access-Control-Allow-Methods'] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
         response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
-
+        '''
         return response1
 
     elif request.method=="POST":
         print("inside ncappsingupres POST")
         payload = request.get_json()
+        print("payload")
         print(payload)
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-
         # firebase auth setup
         try:
             print('inside try')
@@ -666,9 +686,10 @@ def ncappsingupres():
         resp_status, app_data = app_detail_fetch(criteria_json)
         app_details = app_data["result_data"][0]
         usrmsg = None
-
+        print("app details")
+        print(app_details)
         if resp_status == "success":
-            if app_data["result_data"] != None:
+            if app_data["result_data"] != None or app_data["result_data"] != "":
                 res_to_send = "success"
                 redir_ur = app_details["redirecturi"]
                 usrmsg = app_data["usrmsg"]
@@ -684,158 +705,29 @@ def ncappsingupres():
         if res_to_send == "success":
             # Generate authtoken for the user as this is trusted app.  
             # This is to be send by trusted app whenever they communicate
+            
             criteria_json = {
                 "entityid" : entityid,
                 "cntryid"  : cntryid,
                 "payload" : {"appid": appid,"redirecturi": redir_ur,"userid": userid}
             }
             ath_tkn_status, ath_tkn_detail = myauth.app_userauth(criteria_json)
+            print("ath_tkn_detail")
+            print(ath_tkn_detail)
 
             if ath_tkn_status == "success":
-                details = {
-                        "regisdetails" : 'type=signup&regdata={"uid":"' + userid + '","email":"' + email + '","authtkn":"' + ath_tkn_detail['result_data']['authtkn'] + '"}&msg=' + usrmsg,
-                        "entityid": entityid,
-                        "cntryid" :cntryid,
-                        "userid" :userid
-                    }
-                st, tempkey = other_app_regi_resp(details)
-                
-                if st <= 0:
-                    urls = {
-                    #    "url": 'http://localhost:4201/noti' + '?type=signup&regdata={"uid":"' + userid + '","email":"' + email + '","authtkn":"' + ath_tkn_detail['result_data']['authtkn'] + '"}&msg=' + usrmsg
-                        "url": redir_ur + '?type=signup&regdata='+ tempkey +'&msg=success'
-                    }
-                    response1 = make_response(jsonify(urls), 200)
-                    print(response1)
-                    return response1
-                else:
-                    ath_tkn_status = "fail"
-                    usrmsg = "key generation failed.  Contact support."
+                urls = {
+                    "url": app_details["redirecturi"] + '?type=signup&regdata='+ ath_tkn_detail["result_data"]["authtkn"] +'&msg=success'
+                }
+            else:
+                ath_tkn_status = "fail"
+                usrmsg = "User registration key generation failed.  Contact support."
 
         if res_to_send != "success" or ath_tkn_status != "success":
             urls = {
-                     "url": redir_ur + "?type=signup&regdata=401&msg="+ usrmsg
+                     "url": app_details["redirecturi"] + "?type=signup&regdata=401&msg="+ usrmsg
                     }
-            response1 = make_response(jsonify(urls), 200)
-            print("end of inside ncappsingupres POST")
-            print(response1)
-            return response1
-
-            
-def other_app_regi_resp(details):
-    print("inside other_app_register")
-    s = 0
-    f = None
-    t = None #message to front end
-    regisdetails = details["regisdetails"]
-    entityid = details["entityid"]
-    cntryid = details["cntryid"]
-    userid = details["userid"]
-    
-    con, cur, s1, f1 = db.mydbopncon()
-    s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
-    s1, f1 = 0, None
-    print("connection statment done", s,f,t)
-
-    i = 0
-    cur_time = datetime.now().strftime('%Y%m%d%H%M%S')
-
-    if s <= 0:
-        while i < 50:
-            r = ''.join(random.choice(string.ascii_letters + string.digits) for x in range(6))
-            tmpkey = create_signature("md5", "nirunidhotpappreg" + r, userid + cur_time, userid)
-            
-
-            command = cur.mogrify("""
-                                    SELECT count(1)
-                                    FROM ncusr.userauth
-                                    WHERE delflg != 'Y'
-                                    AND (
-                                            userauthtkn = %s
-                                        )
-                                """,(tmpkey,) )
-            print(command)
-            cur, s1, f1 = db.mydbfunc(con,cur,command)
-            s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
-            s1, f1 = 0, None
-            print('----------------')
-            print(s)
-            print(f)
-            print('----------------')
-            if s > 0:
-                s, f, t = errhand.get_status(s, 200, f, "user registration temp token fetch failed with DB error", t, "no")
-            print(s,f)
-
-            if s <= 0:
-                db_rec = cur.fetchall()[0][0]
-                print(db_rec)
-            
-                if db_rec > 0:
-                    s, f, t= errhand.get_status(s, 100, f, "tmp token Already exists for retrying time: " + i, t, "no")
-                    i = i + 1
-                    continue
-                else:
-                    print("no records satifying the current user inputs")
-                    tmpkeyset = True
-                    break
-            else:
-                # Some error occured, so no point looping
-                tmpkeyset = False
-                break
-    print(s,f,t)
-
-    if s <= 0 and tmpkeyset:
-        s1, f1 = db.mydbbegin(con, cur)
-        print(s1,f1)
-
-        s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
-        s1, f1 = 0, None
-
-        if s <= 0:
-            command = cur.mogrify("""
-                        INSERT INTO ncusr.appusrregdetail (userid, regisdetails, entityid, countryid, accessedcount, octime, lmtime) 
-                        VALUES (%s,%s,%s,%s,accessedcount + 1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
-                        ON CONFLICT WHERE userid = %s AND entityid = %s AND  countryid = %s
-                        DO UPDATE SET regisdetails = %s, accessedcount = accessedcount + 1, lmtime = CURRENT_TIMESTAMP
-                        """,(userid, regisdetails,entityid, cntryid,userid,entityid, cntryid,regisdetails,))
-            print(command)
-            print(userid, regisdetails,entityid, cntryid)
-            cur, s1, f1 = db.mydbfunc(con,cur,command)
-            s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
-            s1, f1 = 0, None
-
-            if s > 0:
-                s, f, t= errhand.get_status(s, 200, f, "SIGNUP user data Insert/update failed", t, "no")
-
-            print('SIGNUP user data Insert/update successful')
-    
-        if s <= 0:
-            con.commit()
-    return s, tmpkey
-
-
-
-'''
-response1.headers['Access-Control-Allow-Origin'] = "*"
-response1.headers['Access-Control-Allow-Methods'] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
-response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
-response1.headers['Origin'] = "http://localhost:4201"
-print(response1.headers)
-#del response1.headers["entityid"]
-#del response1.headers["countryid"]
-print(response1.headers)
-print("end of inside ncappsingupres POST suc")
-'''
-
-
-#return redirect(redir_ur + '?type=signup&regdata={"uid":"' + userid + '","email":"' + email + '","authtkn":"' + ath_tkn_detail['result_data']['authtkn'] + '"}&msg=' + usrmsg, code=302)
-
-'''
-response1 = make_response(redirect(redir_ur + "?type=signup&regdata=401&msg="+ usrmsg, code=302))
-response1.headers['Origin'] = "http://localhost:4201"
-response1.headers['Access-Control-Allow-Origin'] = "*"
-response1.headers['Access-Control-Allow-Methods'] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
-response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
-
-#return redirect(redir_ur + "?type=signup&regdata=401&msg="+ usrmsg, code=302)
-'''
+        response1 = make_response(jsonify(urls), 200)
+        print("end of inside ncappsingupres POST")
+        print(response1)
+        return response1

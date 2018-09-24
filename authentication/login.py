@@ -35,8 +35,8 @@ def login():
 @bp_login.route("/dvlogin",methods=["GET","OPTIONS"])
 def dvlogin():
     if request.method=="OPTIONS":
-        print("inside login options")
-        return "inside login options"
+        print("inside dvlogin options")
+        return "inside dvlogin options"
 
     elif request.method=="GET":
         res_to_send, response = login_common(request, 'dv')
@@ -59,7 +59,8 @@ def login_common(request, site):
     res_to_send = 'fail'
     print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-    userid = jwtf.decodetoken(request, needtkn = False)
+    dtkn = jwtf.decodetoken(request, needtkn = False)
+    userid = dtkn.get("user_id", None)
     entityid = request.headers.get("entityid", None)
     cntryid = request.headers.get("countryid", None)
 
@@ -215,7 +216,8 @@ def loginsk_common(request, site):
     res_to_send = 'fail'
     print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-    userid = jwtf.decodetoken(request, needtkn = False)
+    dtkn = jwtf.decodetoken(request, needtkn = False)
+    userid = dtkn.get("user_id", None)
     entityid = request.headers.get("entityid", None)
     cntryid = request.headers.get("countryid", None)
 
@@ -349,7 +351,8 @@ def logout_common(request, site):
     res_to_send = 'fail'
     print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-    userid = jwtf.decodetoken(request, needtkn = False)
+    dtkn = jwtf.decodetoken(request, needtkn = False)
+    userid = dtkn.get("user_id", None)
     entityid = request.headers.get("entityid", None)
     cntryid = request.headers.get("countryid", None)
     sh = request.headers.get("mysession", None)
