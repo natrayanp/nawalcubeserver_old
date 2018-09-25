@@ -563,7 +563,7 @@ def ncappsignup():
         res_to_send, appname = other_app_register(criteria_json)
         # success -->  {"appname": app_details["appname"]}
         # failure -->  {"usrmsg": usrmsg}
-
+        print(res_to_send, appname)
         if res_to_send == 'success':
             print(config.SIGNUPURL[config.LIVE])
             print(payload["appid"])
@@ -574,7 +574,7 @@ def ncappsignup():
             # resps = make_response(jsonify(response), 200 if res_to_send == 'success' else 400)
         else:
             print(appname["usrmsg"])
-            return redirect(config.SIGNUPURL[config.LIVE]+"?type=signup&regdata=401&msg="+appname["usrmsg"], code=302)
+            return redirect(payload["redirecturi"]+"?type=signup&regdata=401&msg="+appname["usrmsg"], code=302)
 
 def other_app_register(criteria_json):
     print("inside other_app_register")
@@ -623,6 +623,7 @@ def other_app_register(criteria_json):
                 usrmsg = "App is not a Trusted app"
         else:
             usrmsg = "This is not a registered app"
+
     if res_to_send != "success":
         res_to_send = "fail"
         ret_resp_data = {"usrmsg": usrmsg}
@@ -731,3 +732,121 @@ def ncappsingupres():
         print("end of inside ncappsingupres POST")
         print(response1)
         return response1
+
+
+@bp_appfunc.route("/ncappsignupfetch",methods=["GET","POST","OPTIONS"])
+def ncappsignupfetch():
+    #Fetch the singup data
+    if request.method=="OPTIONS":
+        print("inside ncappsignupfetch options")
+
+        response1 = make_response(jsonify("inside ncappsignupfetch options"))
+        '''
+        del response1.headers["entityid"]
+        del response1.headers["countryid"]
+        response1.headers['Origin'] = "http://localhost:4201"
+        response1.headers['Access-Control-Allow-Origin'] = "*"
+        response1.headers['Access-Control-Allow-Methods'] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
+        response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
+        '''
+        return response1
+
+    elif request.method=="POST":
+        print("inside ncappsignupfetch POST")
+        payload = request.get_json()
+        print("payload")
+        print(payload)
+        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        entityid = request.headers.get("entityid", None)
+        cntryid = request.headers.get("countryid", None)
+        criteria_json = {
+            "entityi": entityid,
+            "cntryid": cntryid,
+            "payload": payload
+        }
+        res_status, res_data = fetch_app_data_only_wth_tkn(criteria_json)
+        
+
+
+def fetch_app_data_only_wth_tkn(criteria_json):
+# payload = {"userauthtkn": , "appid": ,"appkey":}
+# entity id and country id will come in header which are mandator.
+# Output =  { 'result_data' : [success -> ncapp.appdetail] [Failure -> ""]
+#             'status': success/fail,  'usrmsg': ''/error message }
+    print("inside fetch_app_data_only_wth_tkn function")
+    s = 0
+    f = None
+    t = None #message to front end
+    payload = criteria_json.get("payload",None)
+    print(payload)
+
+    if payload == None:
+        appid = None
+        appkey = None
+        userauthtkn = None
+
+        # s, f, t= errhand.get_status(s, 100, f, "no payload provided", t, "yes")
+    else:
+        if payload.get("appid", None) != None:
+            appid = payload['appid']
+        else:
+            appid = None
+            s, f, t= errhand.get_status(s, 100, f, "appid not provided", t, "yes")
+
+        if payload.get("appkey", None) != None:
+            appkey = payload['appkey']
+        else:
+            appkey = None
+            s, f, t= errhand.get_status(s, 100, f, "appkey not provided", t, "yes")
+
+        if payload.get("userauthtkn", None) != None:
+            userauthtkn = payload['userauthtkn']
+        else:
+            userauthtkn = None
+            s, f, t= errhand.get_status(s, 100, f, "usertoken is not provided", t, "yes")
+    print(appid, appkey, userauthtkn)
+
+    if s <= 0:
+        con, cur, s1, f1 = db.mydbopncon()
+        s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
+        s1, f1 = 0, None
+        print("DB connection established", s,f,t)
+    
+
+    if s <= 0:
+        command = cur.mogrify("""
+                                SELECT json_agg(a) FROM (
+                                SELECT *
+                                FROM ncapp.userauth
+                                WHERE tknexpiry >= current_timestamp
+                                AND appid = %s AND userauthtkn = %s
+                                AND entityid = %s AND countryid = %s
+                                ) as a
+                            """,(appid, userauthtkn, entityid, cntryid,) )
+        print(command)
+        cur, s1, f1 = db.mydbfunc(con,cur,command)
+        s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
+        s1, f1 = 0, None
+        print('----------------')
+        print(s)
+        print(f)
+        print('----------------')
+        if s > 0:
+            s, f, t = errhand.get_status(s, 200, f, "App Name data fetch failed with DB error", t, "no")
+    print(s,f)
+    
+    app_db_rec = None
+    if s <= 0:
+        app_db_rec = cur.fetchall()[0][0]
+        print(app_db_rec)
+        print(len(app_db_rec))
+    
+        if app_db_rec == None or len(app_db_rec) < 1:
+            s, f, t= errhand.get_status(s, 100, f, "Unable to locate the app id", t, "yes")            
+        else:
+            app_db_rec = app_db_rec[0]
+            print("App id identified successfully")
+            pass            
+    
+    print(s,f)
+
