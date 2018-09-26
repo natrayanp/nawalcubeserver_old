@@ -3,7 +3,7 @@ from flask import request
 from flask_cors import CORS, cross_origin
 
 app = Flask(__name__)
-CORS(app,supports_credentials=True)
+CORS(app,supports_credentials=True,headers='Content-Type,countryid')
 
 from nawalcube_server import authentication
 

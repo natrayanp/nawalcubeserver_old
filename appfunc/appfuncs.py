@@ -734,49 +734,52 @@ def ncappsingupres():
         return response1
 
 
-@bp_appfunc.route("/ncappsignupfetch",methods=["GET","POST","OPTIONS"])
-def ncappsignupfetch():
+@bp_appfunc.route("/ncappfetchfrmtkn",methods=["GET","POST","OPTIONS"])
+def ncappfetchfrmtkn():
     #Fetch the singup data
     if request.method=="OPTIONS":
-        print("inside ncappsignupfetch options")
-
-        response1 = make_response(jsonify("inside ncappsignupfetch options"))
-        '''
-        del response1.headers["entityid"]
-        del response1.headers["countryid"]
-        response1.headers['Origin'] = "http://localhost:4201"
-        response1.headers['Access-Control-Allow-Origin'] = "*"
-        response1.headers['Access-Control-Allow-Methods'] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
-        response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
-        '''
+        print("inside ncappfetchfrmtkn options")        
+        response1 = make_response(jsonify("inside ncappfetchfrmtkn options"),200)
+        response1.headers.add("Access-Control-Allow-Headers", "Origin, entityid, Content-Type, X-Auth-Token, countryid")
         return response1
 
     elif request.method=="POST":
         print("inside ncappsignupfetch POST")
-        payload = request.get_json()
+        daa = request.data
+        print("daa", daa)
+        print(format(daa))
+        payload = json.loads(daa)
         print("payload")
         print(payload)
+        print(type(payload))
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         entityid = request.headers.get("entityid", None)
-        cntryid = request.headers.get("countryid", None)
+        countryid = request.headers.get("countryid", None)
         criteria_json = {
-            "entityi": entityid,
-            "cntryid": cntryid,
+            "entityid": entityid,
+            "countryid": countryid,
             "payload": payload
         }
         res_status, res_data = fetch_app_data_only_wth_tkn(criteria_json)
+
+        if res_status == "success":
+            response1 = make_response(jsonify(res_data),200)
+        else:
+            response1 = make_response(jsonify(res_data),400)
         
+        return response1
 
 
 def fetch_app_data_only_wth_tkn(criteria_json):
 # payload = {"userauthtkn": , "appid": ,"appkey":}
 # entity id and country id will come in header which are mandator.
-# Output =  { 'result_data' : [success -> ncapp.appdetail] [Failure -> ""]
-#             'status': success/fail,  'usrmsg': ''/error message }
+# Output = {"userauthtkn": "","userid": "","emailid": "","status": success/fail}
+        
     print("inside fetch_app_data_only_wth_tkn function")
     s = 0
     f = None
     t = None #message to front end
+    print(criteria_json)
     payload = criteria_json.get("payload",None)
     print(payload)
 
@@ -817,12 +820,12 @@ def fetch_app_data_only_wth_tkn(criteria_json):
         command = cur.mogrify("""
                                 SELECT json_agg(a) FROM (
                                 SELECT *
-                                FROM ncapp.userauth
+                                FROM ncusr.userauth
                                 WHERE tknexpiry >= current_timestamp
                                 AND appid = %s AND userauthtkn = %s
                                 AND entityid = %s AND countryid = %s
                                 ) as a
-                            """,(appid, userauthtkn, entityid, cntryid,) )
+                            """,(appid, userauthtkn, config.INSTALLDATA[config.LIVE]["entityid"],config.INSTALLDATA[config.LIVE]["countryid"],) )
         print(command)
         cur, s1, f1 = db.mydbfunc(con,cur,command)
         s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
@@ -832,21 +835,147 @@ def fetch_app_data_only_wth_tkn(criteria_json):
         print(f)
         print('----------------')
         if s > 0:
-            s, f, t = errhand.get_status(s, 200, f, "App Name data fetch failed with DB error", t, "no")
+            s, f, t = errhand.get_status(s, 200, f, "User auth token data fetch failed with DB error", t, "no")
+    print(s,f)
+    
+    usr_db_rec = None
+    if s <= 0:
+        usr_db_rec = cur.fetchall()[0][0]
+        print(usr_db_rec)
+        if usr_db_rec != None:
+            print(len(usr_db_rec)) 
+    
+        if usr_db_rec == None or len(usr_db_rec) < 1:
+            s, f, t= errhand.get_status(s, 100, f, "User auth token is not valid", t, "yes")            
+        else:
+            usr_db_rec = usr_db_rec[0]
+            print("App token verified successfully")
+            pass            
+    
+    print(s,f)
+
+
+    if s <= 0:
+        command = cur.mogrify("""
+                                SELECT json_agg(a) FROM (
+                                SELECT *
+                                FROM ncapp.appdetail
+                                WHERE appid = %s AND appkey = %s
+                                AND entityid = %s AND countryid = %s
+                                ) as a
+                            """,(appid, appkey, config.INSTALLDATA[config.LIVE]["entityid"],config.INSTALLDATA[config.LIVE]["countryid"],) )
+        print(command)
+        cur, s1, f1 = db.mydbfunc(con,cur,command)
+        s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
+        s1, f1 = 0, None
+        print('----------------')
+        print(s)
+        print(f)
+        print('----------------')
+        if s > 0:
+            s, f, t = errhand.get_status(s, 200, f, "User auth token data fetch failed with DB error", t, "no")
     print(s,f)
     
     app_db_rec = None
     if s <= 0:
         app_db_rec = cur.fetchall()[0][0]
         print(app_db_rec)
-        print(len(app_db_rec))
+        if app_db_rec != None:
+            print(len(app_db_rec))
     
         if app_db_rec == None or len(app_db_rec) < 1:
-            s, f, t= errhand.get_status(s, 100, f, "Unable to locate the app id", t, "yes")            
+            s, f, t= errhand.get_status(s, 100, f, "App id is not valid", t, "yes")            
         else:
             app_db_rec = app_db_rec[0]
-            print("App id identified successfully")
+            print("App id verified successfully")
             pass            
     
     print(s,f)
 
+    if s <= 0:
+        command = cur.mogrify("""
+                                SELECT json_agg(a) FROM (
+                                SELECT *
+                                FROM ncusr.userdetails a, ncusr.userlogin b
+                                WHERE a.userid = %s AND a.entityid = %s AND a.countryid = %s
+                                AND a.userid = b.userid AND a.entityid = b.entityid AND a.countryid = b.countryid
+                                ) as a
+                            """,(usr_db_rec["userid"],  config.INSTALLDATA[config.LIVE]["entityid"],config.INSTALLDATA[config.LIVE]["countryid"],) )
+        print(command)
+        cur, s1, f1 = db.mydbfunc(con,cur,command)
+        s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
+        s1, f1 = 0, None
+        print('----------------')
+        print(s)
+        print(f)
+        print('----------------')
+        if s > 0:
+            s, f, t = errhand.get_status(s, 200, f, "User details data fetch failed with DB error", t, "no")
+    print(s,f)
+    
+    more_usr_db_rec = None
+    if s <= 0:
+        more_usr_db_rec = cur.fetchall()[0][0]
+        print(more_usr_db_rec)
+        print(len(more_usr_db_rec))
+    
+        if more_usr_db_rec == None or len(more_usr_db_rec) < 1:
+            s, f, t= errhand.get_status(s, 100, f, "User details not available for the given auth token", t, "yes")            
+        else:
+            more_usr_db_rec = more_usr_db_rec[0]
+            print("user details fetched successfully")
+            pass            
+    
+    print(s,f)
+
+    if s <= 0:
+        #Validate the user status
+        if more_usr_db_rec["userstatus"] == 'B':
+            #B-Blocked , I-Deleteduser
+            s, f, t= errhand.get_status(s, 100, f, "User is blocked", t, "yes")
+        elif more_usr_db_rec["userstatus"] == 'I':
+            #B-Blocked , I-Deleteduser
+            s, f, t= errhand.get_status(s, 100, f, "User is Deleted", t, "yes")
+
+
+    if s <= 0:
+        data_to_auth_tkn = {
+            "entityid": config.INSTALLDATA[config.LIVE]["entityid"],          
+            "cntryid" : config.INSTALLDATA[config.LIVE]["countryid"],
+            "payload" : {
+                        "appid" : app_db_rec["appid"],
+                        "redirecturi" : app_db_rec["redirecturi"],
+                        "userid" : more_usr_db_rec["userid"]
+                        }
+        }
+    
+        ath_tkn_status, ath_tkn_detail = myauth.app_userauth(data_to_auth_tkn)
+        print("new ath_tkn_detail")
+        print(ath_tkn_detail)
+
+        if ath_tkn_status == "success":
+            s, f, t= errhand.get_status(s, 0, f, "User auth token regenerated", t, "no")
+            new_userauthtkn = ath_tkn_detail["result_data"]["authtkn"]
+        else:
+            s, f, t= errhand.get_status(s, 100, f, "error in User auth token regeneration", t, "no")
+            new_userauthtkn = None
+
+    res_status = None
+    if s <= 0:
+        res_status = "success"
+        user_auth_detais = {
+            "userauthtkn": new_userauthtkn,
+            "userid": more_usr_db_rec["userid"],
+            "emailid": more_usr_db_rec["sinupemail"],
+            "status": res_status
+        }
+    else:
+        res_status = "fail"
+        user_auth_detais = {
+            "userauthtkn": "",
+            "userid": "",
+            "emailid": "",
+            "status": res_status
+        }
+    print("rached end")
+    return res_status, user_auth_detais

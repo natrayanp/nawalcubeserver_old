@@ -212,11 +212,12 @@ def userauth():
         return resps
 
 def app_userauth(criteria_json):
+    # Generate a user auth token
     # input 
     #   criteria_json = {
     #        "entityid" : entityid,
     #        "cntryid"  : cntryid,
-    #        "payload" : payload  => {appid,redirecturi,userid}
+    #        "payload" : payload  => {appid,redirecturi,userid,expiremin<tokenexipry in mins>}
     #   }
     # Output
     #    response = {
@@ -269,7 +270,9 @@ def app_userauth(criteria_json):
             else:
                 userid = None
                 s, f, t= errhand.get_status(s, 100, f, "userid is not provided", t, "yes")
-  
+
+            expiremin = payload.get("expiremin", None)
+
     print(appid,redirecturi,entityid,cntryid,userid)
 
     if s <= 0:
@@ -421,7 +424,7 @@ def app_userauth(criteria_json):
 
 
         if s <= 0:
-            passexpiry = get_expiry_time("authtkn", appusrtype)
+            passexpiry = get_expiry_time("authtkn", appusrtype, expiremin)
             # VALUES(%s, %s, %s, %(timestamp)s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             command = cur.mogrify("""
                         INSERT into ncusr.userauth (userid,appid,userauthtkn,tknexpiry,entityid,countryid,octime,lmtime)
@@ -479,49 +482,52 @@ def create_signature(hastype, more_key_str, key, message):
     return hmac.new(b, message, hashlib.sha256).hexdigest()
 
 
-def get_expiry_time(tkn_type, ut) -> datetime:
+def get_expiry_time(tkn_type, ut, expiremin=None) -> datetime:
     print(tkn_type, ut)
     et = None
-    if tkn_type == "authtkn":
-        # Set the app token expiry based on the user type
-        # I - Investor - 1 day
-        # D - MFD  - 1 hour
-        # A - RIA  - 1 hour
-        # P - Portfolio tool - 1 hour
-        # T - Trusted app - 1 hour
-        if ut == 'I':
-            et = datetime.now() + timedelta(hours=1)
-        elif ut == 'D':
-            et = datetime.now() + timedelta(hours=1)
-        elif ut == 'A':
-            et = datetime.now() + timedelta(hours=1)
-        elif ut == 'P':
-            et = datetime.now() + timedelta(hours=1)
-        elif ut == 'T':
-            reference_time = datetime.now()
-            print(reference_time)
-            et = reference_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1,microseconds=-1)       
-            print(et)
-            #Example et value 2018-09-04 23:59:59.999999
-    elif tkn_type == "passtkn":
-        # Set the user token expiry based on the user type
-        # I - Investor - 1 day
-        # D - MFD  - no Expiry
-        # A - RIA  - no Expiry
-        # P - Portfolio tool - 1 day
-        # T - Trusted app - no Expiry
-        if ut == 'I':
-            reference_time = datetime.now()
-            et = reference_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1,microseconds=-1) 
-        elif ut == 'D':
-            et = datetime.now() + timedelta(years=100)
-        elif ut == 'A':
-            et = datetime.now() + timedelta(years=100)
-        elif ut == 'P':
-            reference_time = datetime.now()
-            et = reference_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1,microseconds=-1) 
-        elif ut == 'T':            
-            et = datetime.now() + timedelta(years=100)
+    if expiremin != None:
+        et = datetime.now() + timedelta(min= expiremin)
+    else:
+        if tkn_type == "authtkn":
+            # Set the app token expiry based on the user type
+            # I - Investor - 1 day
+            # D - MFD  - 1 hour
+            # A - RIA  - 1 hour
+            # P - Portfolio tool - 1 hour
+            # T - Trusted app - 1 hour
+            if ut == 'I':
+                et = datetime.now() + timedelta(hours=1)
+            elif ut == 'D':
+                et = datetime.now() + timedelta(hours=1)
+            elif ut == 'A':
+                et = datetime.now() + timedelta(hours=1)
+            elif ut == 'P':
+                et = datetime.now() + timedelta(hours=1)
+            elif ut == 'T':
+                reference_time = datetime.now()
+                print(reference_time)
+                et = reference_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1,microseconds=-1)       
+                print(et)
+                #Example et value 2018-09-04 23:59:59.999999
+        elif tkn_type == "passtkn":
+            # Set the user token expiry based on the user type
+            # I - Investor - 1 day
+            # D - MFD  - no Expiry
+            # A - RIA  - no Expiry
+            # P - Portfolio tool - 1 day
+            # T - Trusted app - no Expiry
+            if ut == 'I':
+                reference_time = datetime.now()
+                et = reference_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1,microseconds=-1) 
+            elif ut == 'D':
+                et = datetime.now() + timedelta(years=100)
+            elif ut == 'A':
+                et = datetime.now() + timedelta(years=100)
+            elif ut == 'P':
+                reference_time = datetime.now()
+                et = reference_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1,microseconds=-1) 
+            elif ut == 'T':            
+                et = datetime.now() + timedelta(years=100)
     print(et)
     return et
     #return et.strftime('%d-%m-%YT%H:%M:%S')

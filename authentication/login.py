@@ -429,9 +429,11 @@ def logout_common(request, site):
 @bp_login.route("/signup",methods=["GET","POST","OPTIONS"])
 def signup():
     if request.method=="OPTIONS":
-            print("inside signup options")
-            response = "inside signup options"
-            return make_response(jsonify(response), 200)
+        print("inside signup options")
+        response1 = make_response(jsonify("inside signup options"),200)
+        #response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
+        #response1.headers.add("Access-Control-Allow-Headers", "Origin, entityid, Content-Type, X-Auth-Token, countryid")
+        return response1
 
     elif request.method=="POST":
         print("inside signup POST")
