@@ -740,7 +740,7 @@ def ncappfetchfrmtkn():
     if request.method=="OPTIONS":
         print("inside ncappfetchfrmtkn options")        
         response1 = make_response(jsonify("inside ncappfetchfrmtkn options"),200)
-        response1.headers.add("Access-Control-Allow-Headers", "Origin, entityid, Content-Type, X-Auth-Token, countryid")
+        #response1.headers.add("Access-Control-Allow-Headers", "Origin, entityid, Content-Type, X-Auth-Token, countryid")
         return response1
 
     elif request.method=="POST":
