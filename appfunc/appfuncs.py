@@ -598,7 +598,6 @@ def other_app_register(criteria_json):
             "payload" : payload
         }
     resp_status, app_data = app_detail_fetch(criteria_json)
-
     usrmsg = None
     #resp_status = "success"#testcode
     #app_data["result_data"] = {"appname": "kumar"}#testcode
@@ -629,6 +628,7 @@ def other_app_register(criteria_json):
         ret_resp_data = {"usrmsg": usrmsg}
 
     print(res_to_send, ret_resp_data)
+    print("end of other_app_register")
     return res_to_send, ret_resp_data
 
 
@@ -684,6 +684,8 @@ def ncappsingupres():
             "cntryid"  : cntryid,
             "payload" : payload_to
         }
+        print (criteria_json)
+        print (payload_to)
         resp_status, app_data = app_detail_fetch(criteria_json)
         app_details = app_data["result_data"][0]
         usrmsg = None
@@ -703,6 +705,7 @@ def ncappsingupres():
             else:
                 usrmsg = app_data["usrmsg"]
 
+
         if res_to_send == "success":
             # Generate authtoken for the user as this is trusted app.  
             # This is to be send by trusted app whenever they communicate
@@ -712,6 +715,7 @@ def ncappsingupres():
                 "cntryid"  : cntryid,
                 "payload" : {"appid": appid,"redirecturi": redir_ur,"userid": userid}
             }
+            print(criteria_json)
             ath_tkn_status, ath_tkn_detail = myauth.app_userauth(criteria_json)
             print("ath_tkn_detail")
             print(ath_tkn_detail)
@@ -731,6 +735,7 @@ def ncappsingupres():
         response1 = make_response(jsonify(urls), 200)
         print("end of inside ncappsingupres POST")
         print(response1)
+        print("#########################################################################################################")
         return response1
 
 
@@ -761,6 +766,7 @@ def ncappfetchfrmtkn():
             "payload": payload
         }
         res_status, res_data = fetch_app_data_only_wth_tkn(criteria_json)
+        print(res_data)
 
         if res_status == "success":
             response1 = make_response(jsonify(res_data),200)
@@ -956,6 +962,7 @@ def fetch_app_data_only_wth_tkn(criteria_json):
         if ath_tkn_status == "success":
             s, f, t= errhand.get_status(s, 0, f, "User auth token regenerated", t, "no")
             new_userauthtkn = ath_tkn_detail["result_data"]["authtkn"]
+            print(new_userauthtkn)
         else:
             s, f, t= errhand.get_status(s, 100, f, "error in User auth token regeneration", t, "no")
             new_userauthtkn = None
@@ -965,7 +972,9 @@ def fetch_app_data_only_wth_tkn(criteria_json):
         res_status = "success"
         user_auth_detais = {
             "userauthtkn": new_userauthtkn,
+            "tknexpiry": usr_db_rec["tknexpiry"],
             "userid": more_usr_db_rec["userid"],
+            "username": more_usr_db_rec["username"],
             "emailid": more_usr_db_rec["sinupemail"],
             "status": res_status
         }
@@ -974,6 +983,7 @@ def fetch_app_data_only_wth_tkn(criteria_json):
         user_auth_detais = {
             "userauthtkn": "",
             "userid": "",
+            "username": "",
             "emailid": "",
             "status": res_status
         }

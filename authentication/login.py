@@ -5,13 +5,15 @@ from nawalcube_server.common import dbfunc as db
 from nawalcube_server.common import error_logics as errhand
 from nawalcube_server.common import jwtfuncs as jwtf
 from nawalcube_server.common import serviceAccountKey as sak
+from nawalcube_server.common import configs as configs
 from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import auth
 import os
 import hashlib
-
+import json
+import requests
 
 
 @bp_auth.route("/login")
@@ -436,6 +438,7 @@ def signup():
         return response1
 
     elif request.method=="POST":
+        print("#########################################################################################################")
         print("inside signup POST")
         s = 0
         f = None
@@ -448,58 +451,186 @@ def signup():
         token = tkn
         userid = dtkn["user_id"]
         entityid = request.headers.get("entityid", None)
-        cntryid = request.headers.get("countryid", None)
+        countryid = request.headers.get("countryid", None)
         print('iamback')
         print(token)
         print(userid)
         print(entityid)
-        
-        print(s)
-        if s <= 0:
 
-            if payload.get("custtype", None) != None:
-                usercusttype = payload['custtype']['value']
-            else:
-                usercusttype = None
-                s, f, t= errhand.get_status(s, 100, f, "No user customer type from client", t, "yes")
+        sign_data = {
+            "userid" : userid,
+            "entityid" : entityid,
+            "countryid" : countryid,
+            "payload" : payload,
+            "typeoper" : "signupwtkn",
+            "token": token
+        }
 
-            if payload.get("name", None) != None:
-                sinupusername = payload['name']
-            else:
-                sinupusername = None
-                s, f, t= errhand.get_status(s, 100, f, "No user name from client", t, "yes")
+        respo = signup_common(sign_data)
 
-            if payload.get("adhaar", None) != None:
-                sinupadhaar = payload['adhaar']
-            else:
-                sinupadhaar = None
-                if usercusttype not in ['D','A','T']:                    
-                    s, f, t= errhand.get_status(s, 100, f, "No adhaar from client", t, "yes")
-                    
-            if payload.get("pan", None) != None:
-                sinuppan = payload['pan']
-            else:
-                sinuppan = None
-                if usercusttype not in ['D','A','T']:                    
-                    s, f, t= errhand.get_status(s, 100, f, "No pan from client", t, "yes")
+        if respo["status"] == "success":
+            response = {
+                'status': respo["status"],
+                'error_msg' : ''
+            }
+            resps = make_response(jsonify(response), 200)
+        else:
+            response = {
+                'status': respo["status"],
+                'error_msg' : errhand.error_msg_reporting(s, t)
+            }
+            resps = make_response(jsonify(response), 400)
+        print("#########################################################################################################")
+        return resps
+
+
+@bp_login.route("/signupnotkn",methods=["GET","POST","OPTIONS"])
+def signupnotkn():
+    if request.method=="OPTIONS":
+        print("inside signupnotkn options")
+        response1 = make_response(jsonify("inside signupnotkn options"),200)
+        #response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
+        #response1.headers.add("Access-Control-Allow-Headers", "Origin, entityid, Content-Type, X-Auth-Token, countryid")
+        return response1
+
+    elif request.method=="POST":
+        print("#########################################################################################################")
+        print("inside signupnotkn POST")
+        s = 0
+        f = None
+        t = None #message to front end
+        payload = request.get_json()
+        print(payload)
+        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    
+        entityid = request.headers.get("entityid", None)
+        countryid = request.headers.get("countryid", None)
+        print('iamback')
+        print(entityid)
+        print(countryid)
+
+        sign_data = {
+            "userid" : None,
+            "entityid" : entityid,
+            "countryid" : countryid,
+            "payload" : payload,
+            "typeoper" : "signupnotkn",
+            "token": None
+        }
+
+        respo = signup_common(sign_data)
+        print(respo)
+        if respo["status"] == "success":
+            response = {
+                'status': respo["status"],
+                'error_msg' : ''
+            }
+            resps = make_response(jsonify(response), 200)
+        else:
+            response = {
+                'status': respo["status"],
+                'error_msg' : errhand.error_msg_reporting(s, t)
+            }
+            resps = make_response(jsonify(response), 400)
+        return resps
+
+
+def signup_common(sign_data):
+
+    print("inside signup_common")
+    s = 0
+    f = None
+    t = None #message to front end
+    response = None
+    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    payload = sign_data["payload"]["signup_frm"]
+    usr_payload = sign_data["payload"]["usrpass_frm"]
+
+    if sign_data.get("typeoper", None) != None:
+        typeoper = sign_data['typeoper']
+    else:
+        typeoper = None
+        s, f, t= errhand.get_status(s, 100, f, "type of operation not sent", t, "no")
+
+    if payload.get("custtype", None) != None:
+        usercusttype = payload['custtype']['value']
+    else:
+        usercusttype = None
+        s, f, t= errhand.get_status(s, 100, f, "No user customer type from client", t, "yes")
+
+    if payload.get("name", None) != None:
+        sinupusername = payload['name']
+    else:
+        sinupusername = None
+        s, f, t= errhand.get_status(s, 100, f, "No user name from client", t, "yes")
+
+    if payload.get("adhaar", None) != None:
+        sinupadhaar = payload['adhaar']
+    else:
+        sinupadhaar = None
+        if usercusttype not in ['D','A','T']:                    
+            s, f, t= errhand.get_status(s, 100, f, "No adhaar from client", t, "yes")
             
-            if payload.get("arn", None) != None:
-                sinuparn = payload['arn']
-            else:
-                sinuparn = None
-                if usercusttype not in ['I']:                    
-                    s, f, t= errhand.get_status(s, 100, f, "No arn from client", t, "yes")
+    if payload.get("pan", None) != None:
+        sinuppan = payload['pan']
+    else:
+        sinuppan = None
+        if usercusttype not in ['D','A','T']:                    
+            s, f, t= errhand.get_status(s, 100, f, "No pan from client", t, "yes")
+    
+    if payload.get("arn", None) != None:
+        sinuparn = payload['arn']
+    else:
+        sinuparn = None
+        if usercusttype not in ['I']:                    
+            s, f, t= errhand.get_status(s, 100, f, "No arn from client", t, "yes")
 
-            if payload.get("mobile", None) != None:
-                sinupmobile = payload['mobile']
-            else:
-                sinupmobile = None
-                s, f, t= errhand.get_status(s, 100, f, "No mobile data from client", t, "yes")       
+    if payload.get("mobile", None) != None:
+        sinupmobile = payload['mobile']
+    else:
+        sinupmobile = None
+        s, f, t= errhand.get_status(s, 100, f, "No mobile data from client", t, "yes")
 
-            usertype='W'
-            userstatus = 'S'
-            cur_time = datetime.now().strftime('%Y%m%d%H%M%S')
-            print(sinupadhaar,sinuppan,sinuparn,sinupmobile)
+    if sign_data.get("entityid",None) != None:
+        entityid =  sign_data["entityid"]
+    else:
+        s, f, t= errhand.get_status(s, 100, f, "No entityid detail from client", t, "yes")
+
+    if sign_data.get("countryid",None) != None:
+        countryid =  sign_data["countryid"]
+    else:
+        s, f, t= errhand.get_status(s, 100, f, "No countryid detail from client", t, "yes")
+
+    if typeoper == "signupwtkn":
+        if sign_data.get("userid",None) != None:
+            userid =  sign_data["userid"]
+        else:
+            s, f, t= errhand.get_status(s, 100, f, "No user id detail from client", t, "yes")
+
+        if sign_data.get("token",None) != None:
+            token =  sign_data["token"]
+        else:
+            s, f, t= errhand.get_status(s, 100, f, "No token detail from client", t, "yes")        
+        
+        email = None
+
+    elif typeoper == "signupnotkn":
+        #This is for typeoper = "signupnotkn"
+        userid = None
+        token = None
+        if usr_payload.get("email",None) != None:
+            email =  usr_payload["email"]
+        else:
+            s, f, t= errhand.get_status(s, 100, f, "No email detail from client", t, "yes")
+    
+    else:
+        s, f, t= errhand.get_status(s, 100, f, "Type of operation "+ typeoper + "is not handled", t, "no")
+
+    usertype='W'
+    userstatus = 'S'
+    print(sinupadhaar,sinuppan,sinuparn,sinupmobile)
+    if s <= 0:
         # firebase auth setup
         try:
             print('inside try')
@@ -514,7 +645,8 @@ def signup():
             pass
 
         print('app ready')
-        
+
+    if typeoper == "signupwtkn" and s <= 0:
         try:
             print('start decode')
             decoded_token = auth.verify_id_token(token,app=default_app)
@@ -531,108 +663,261 @@ def signup():
             exp = decoded_token.get("exp", None)
             iat = decoded_token.get("iat", None)
             email = decoded_token.get("email", None)
-            # set entity id to the token
-            entityid = request.headers.get("entityid", None)
-            cntryid = request.headers.get("countryid", None)
-            
-            if entityid != None:
-                try:
-                    print('start set custom')
-                    auth.set_custom_user_claims(uid, {"entityid": entityid, "countryid": cntryid, "custtype": usercusttype},app=default_app)
-                    print('end set custom')
-                except ValueError:
-                    print('valuererror')
-                    s, f, t = errhand.get_status(s, 100, f, "Not a valid user properties", t, "yes")
-                except AuthError:
-                    print('AuthError')
-                    s, f, t = errhand.get_status(s, 100, f, "Not a valid user credentials", t, "yes")
-            else:
-                print('else after autherror')
-                s, f, t = errhand.get_status(s, 100, f, "No entity id from client", t, "yes")
-
-            print('apppa mudichachu')
+    
+    elif typeoper == "signupnotkn" and s <= 0:
+        try:
+            user = auth.get_user_by_email(email,app=default_app)
+        except AuthError:
+            print('AuthError')
+            print(AuthError)            
+            s, f, t = errhand.get_status(s, 100, f, "email id " + email + " not registered", t, "yes")            
+        else:
+            s, f, t = errhand.get_status(s, 0, f, "User id already exists", t, "no")
+            uid = format(user.uid)
             print(uid)
-            print(decoded_token)
+    print(entityid)
+    if entityid != None and s <= 0:
+        try:
+            print('start set custom')
+            auth.set_custom_user_claims(uid, {"entityid": entityid, "countryid": countryid, "custtype": usercusttype},app=default_app)
+            print('end set custom')
+        except ValueError:
+            print('valuererror')
+            s, f, t = errhand.get_status(s, 100, f, "Not a valid user properties", t, "yes")
+        except AuthError:
+            print('AuthError')
+            s, f, t = errhand.get_status(s, 100, f, "Not a valid user credentials", t, "yes")
+    else:
+        print('else after autherror')
+        if entityid == None:
+            s, f, t = errhand.get_status(s, 100, f, "No entity id from client", t, "yes")
+
+    print('apppa mudichachu')
+    print(uid)
+
+    if s <= 0:
+        if email != None:
+            sinupemail = email
+        else:
+            sinupemail = None
+            s, f, t = errhand.get_status(s, 100, f, "No email data from client", t, "yes")
+
+        if uid != None:
+            userid = uid
+        else:
+            userid = None
+            s, f, t = errhand.get_status(s, 100, f, "No user id from client" , t, "yes")
+        
+        
+    if s <= 0:
+        con, cur, s1, f1 = db.mydbopncon()
+        s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
+        s1, f1 = 0, None
         
 
-        if s <= 0:
-            if email != None:
-                sinupemail = email
+    if s <= 0:
+        command = cur.mogrify("""
+                                SELECT json_agg(a) FROM (
+                                SELECT l.userid, l.username, l.usertype, l.usercusttype, l.entityid, 
+                                d.sinupusername, d.sinupadhaar, d.sinuppan, d.sinupmobile, d.sinupemail, d.sinuparn
+                                FROM ncusr.userlogin l
+                                LEFT JOIN ncusr.userdetails d ON l.userid = d.userid AND l.entityid = d.entityid
+                                WHERE l.userstatus != 'I'
+                                AND (
+                                        l.userid = %s OR d.sinupadhaar = %s OR d.sinuppan = %s OR sinuparn = %s OR d.sinupmobile = %s OR d.sinupemail = %s
+                                    )
+                                AND l.entityid = %s AND l.countryid = %s
+                                ) as a
+                            """,(uid,sinupadhaar,sinuppan,sinuparn,sinupmobile,sinupemail,entityid,countryid,) )
+        print(command)
+        cur, s1, f1 = db.mydbfunc(con,cur,command)
+        s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
+        s1, f1 = 0, None
+        print('----------------')
+        print(s)
+        print(f)
+        print('----------------')
+        if s > 0:
+            s, f, t = errhand.get_status(s, 200, f, "User data fetch failed with DB error", t, "no")
+    print(s,f)
+    pan_payload = None
+
+    if s <= 0:
+        db_json_rec = cur.fetchall()[0][0]
+        print(db_json_rec)
+
+        if db_json_rec:
+            for rec in db_json_rec:
+                if rec['userid'] != '':
+                    if rec['userid'] == userid:
+                        s, f, t= errhand.get_status(s, 100, f, "Userid Already exists", t, "yes")
+                        
+
+                if rec['sinupadhaar'] != '':           
+                    if rec['sinupadhaar'] == sinupadhaar:
+                        s, f, t= errhand.get_status(s, 100, f, "Adhaar Already registered", t, "yes")
+
+                if rec['sinuppan'] != '':
+                    if rec['sinuppan'] == sinuppan:
+                        s, f, t= errhand.get_status(s, 100, f, "PAN Already registered", t, "yes")
+
+                if rec['sinuparn'] != '':
+                    pan_payload = {"pan": rec['sinuppan']}
+                    if rec['sinuparn'] == sinuppan:
+                        s, f, t= errhand.get_status(s, 100, f, "ARN Already registered", t, "yes")
+
+                if rec['sinupmobile'] != '':
+                    if rec['sinupmobile'] == sinupmobile:
+                        s, f, t= errhand.get_status(s, 100, f, "Mobile Already registered", t, "yes")
+
+                if rec['sinupemail'] != '':
+                    if rec['sinupemail'] == sinupemail:
+                        s, f, t= errhand.get_status(s, 100, f, "Email Already registered", t, "yes")
+        else:
+            print("no records satifying the current user inputs")
+    print(s,f)
+        
+    if s <= 0:
+        s1, f1 = db.mydbbegin(con, cur)
+        print(s1,f1)
+
+        s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
+        s1, f1 = 0, None
+
+    if s <= 0:
+        command = cur.mogrify("""
+                    INSERT INTO ncusr.userlogin (userid, usertype, usercusttype, userstatus, userstatlstupdt, octime, lmtime, entityid, countryid) 
+                    VALUES (%s,%s,%s,%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
+                    """,(userid, usertype, usercusttype, userstatus, entityid, countryid,))
+        print(command)
+        cur, s1, f1 = db.mydbfunc(con,cur,command)
+        s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
+        s1, f1 = 0, None
+
+        if s > 0:
+            s, f, t= errhand.get_status(s, 200, f, "SIGNUP update failed", t, "no")
+        print('Insert or update is successful')
+
+    if s <= 0:
+        command = cur.mogrify("""
+                    INSERT INTO ncusr.userdetails (userid, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, octime, lmtime, entityid, countryid) 
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
+                    """,(userid, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, entityid, countryid,))
+        print(command)
+        cur, s1, f1 = db.mydbfunc(con,cur,command)
+        s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
+        s1, f1 = 0, None
+
+        if s > 0:
+            s, f, t= errhand.get_status(s, 200, f, "SIGNUP update failed", t, "no")
+
+        print('Insert or update is successful')
+
+    if s <= 0:
+        con.commit()
+
+    #Always run pan Payload as long as we have value for pan etc.
+    pan_payload = {
+        "userid" : userid,
+        "entityid" : entityid,
+        "cntryid" : countryid,
+        "pan" : sinuppan
+    }
+
+    status, kyc_data = kyc_detail_update(pan_payload)
+
+    print(kyc_data)
+    if status == "success":
+        s, f, t = errhand.get_status(s, 0, f, "KYC update success", t, "no")
+    else:
+        s, f, t = errhand.get_status(s, 0, f, "KYC update failed", t, "no")
+    
+
+    
+    db.mydbcloseall(con, cur)
+
+    if s <= 0:
+        response = {
+            'status': 'success',
+            'error_msg' : ''
+        }
+        #resps = make_response(jsonify(response), 200)
+    else:
+        response = {
+            'status': 'fail',
+            'error_msg' : errhand.error_msg_reporting(s, t)
+        }
+        #resps = make_response(jsonify(response), 400)
+    print("#########################################################################################################")
+    return response
+
+
+@bp_login.route("/kycupdate",methods=["GET","POST","OPTIONS"])
+def kycupdate():
+    if request.method=="OPTIONS":
+        print("inside kycupdate options")
+        response1 = make_response(jsonify("inside signup options"),200)
+        #response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
+        #response1.headers.add("Access-Control-Allow-Headers", "Origin, entityid, Content-Type, X-Auth-Token, countryid")
+        return response1
+
+    elif request.method=="POST":
+        print("inside kycupdate POST")
+        s = 0
+        f = None
+        t = None #message to front end
+        payload = request.get_json()
+        print(payload)
+        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        
+        print(s)
+        status, kyc_data = kyc_detail_update(payload)
+        print(kyc_data)
+
+        if status == "success":
+            resp = make_response(jsonify(status), 200)
+        else:
+            resp = make_response(jsonify(status), 400)
+        return resp
+
+def kyc_detail_update(pan_data):
+        s = 0
+        f = None
+        t = None #message to front end
+
+        userid =   pan_data["userid"]
+        entityid = pan_data["entityid"]
+        cntryid = pan_data["cntryid"]
+        pan = pan_data["pan"]
+        kyc = "N"
+        username = ''
+        print(pan_data)
+        print(pan)
+        if pan != '' or pan != None:
+            pan_payload = {'pan': pan}
+        else:
+            pan_payload = None
+
+        #Get PAN validated and the PAN data
+        if pan_payload != None:
+            r = requests.post(configs.PANVALURL[configs.LIVE], data=json.dumps(pan_payload))
+            pan_data = json.loads(r.content)
+            print(json.loads(r.content))
+
+            if pan_data["pan_name"] != None:
+                username = pan_data["pan_name"]
             else:
-                sinupemail = None
-                s, f, t = errhand.get_status(s, 100, f, "No email data from client", t, "yes")
-
-            if uid != None:
-                userid = uid
-            else:
-                userid = None
-                s, f, t = errhand.get_status(s, 100, f, "No user id from client" , t, "yes")
+                username = ''            
+            if pan_data["kyc_status"] == "KYC Registered-New KYC":
+                kyc = "Y"
+        else:
+            username = ''
+            kyc = "N"
         
-        
-        if s <= 0:
-            con, cur, s1, f1 = db.mydbopncon()
-            s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
-            s1, f1 = 0, None
-        
+        con, cur, s1, f1 = db.mydbopncon()
+        s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
+        s1, f1 = 0, None
 
-        if s <= 0:
-            command = cur.mogrify("""
-                                    SELECT json_agg(a) FROM (
-                                    SELECT l.userid, l.username, l.usertype, l.usercusttype, l.entityid, 
-                                    d.sinupusername, d.sinupadhaar, d.sinuppan, d.sinupmobile, d.sinupemail, d.sinuparn
-                                    FROM ncusr.userlogin l
-                                    LEFT JOIN ncusr.userdetails d ON l.userid = d.userid AND l.entityid = d.entityid
-                                    WHERE l.userstatus != 'I'
-                                    AND (
-                                            l.userid = %s OR d.sinupadhaar = %s OR d.sinuppan = %s OR sinuparn = %s OR d.sinupmobile = %s OR d.sinupemail = %s
-                                        )
-                                    AND l.entityid = %s AND l.countryid = %s
-                                    ) as a
-                                """,(uid,sinupadhaar,sinuppan,sinuparn,sinupmobile,sinupemail,entityid,cntryid,) )
-            print(command)
-            cur, s1, f1 = db.mydbfunc(con,cur,command)
-            s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
-            s1, f1 = 0, None
-            print('----------------')
-            print(s)
-            print(f)
-            print('----------------')
-            if s > 0:
-                s, f, t = errhand.get_status(s, 200, f, "User data fetch failed with DB error", t, "no")
-        print(s,f)
-
-        if s <= 0:
-            db_json_rec = cur.fetchall()[0][0]
-            print(db_json_rec)
-
-            if db_json_rec:
-                for rec in db_json_rec:
-                    if rec['userid'] != '':
-                        if rec['userid'] == userid:
-                            s, f, t= errhand.get_status(s, 100, f, "Userid Already exists", t, "yes")
-
-                    if rec['sinupadhaar'] != '':           
-                        if rec['sinupadhaar'] == sinupadhaar:
-                            s, f, t= errhand.get_status(s, 100, f, "Adhaar Already registered", t, "yes")
-
-                    if rec['sinuppan'] != '':
-                        if rec['sinuppan'] == sinuppan:
-                            s, f, t= errhand.get_status(s, 100, f, "PAN Already registered", t, "yes")
-
-                    if rec['sinuparn'] != '':
-                        if rec['sinuparn'] == sinuppan:
-                            s, f, t= errhand.get_status(s, 100, f, "ARN Already registered", t, "yes")
-
-                    if rec['sinupmobile'] != '':
-                        if rec['sinupmobile'] == sinupmobile:
-                            s, f, t= errhand.get_status(s, 100, f, "Mobile Already registered", t, "yes")
-
-                    if rec['sinupemail'] != '':
-                        if rec['sinupemail'] == sinupemail:
-                            s, f, t= errhand.get_status(s, 100, f, "Email Already registered", t, "yes")
-            else:
-                print("no records satifying the current user inputs")
-        print(s,f)
         if s <= 0:
             s1, f1 = db.mydbbegin(con, cur)
             print(s1,f1)
@@ -642,48 +927,51 @@ def signup():
 
         if s <= 0:
             command = cur.mogrify("""
-                        INSERT INTO ncusr.userlogin (userid, usertype, usercusttype, userstatus, userstatlstupdt, octime, lmtime, entityid, countryid) 
-                        VALUES (%s,%s,%s,%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
-                        """,(userid, usertype, usercusttype, userstatus, entityid, cntryid,))
+                        UPDATE ncusr.userlogin SET username = %s, kyc_compliant = %s, userstatlstupdt = CURRENT_TIMESTAMP, lmtime = CURRENT_TIMESTAMP 
+                        WHERE userid = %s AND entityid = %s AND countryid = %s;
+                        """,(username, kyc, userid, entityid, cntryid,))
             print(command)
             cur, s1, f1 = db.mydbfunc(con,cur,command)
             s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
             s1, f1 = 0, None
 
             if s > 0:
-                s, f, t= errhand.get_status(s, 200, f, "SIGNUP update failed", t, "no")
-            print('Insert or update is successful')
+                s, f, t= errhand.get_status(s, 200, f, "KYC userlogin table update failed", t, "no")
+            print('KYC ncusr.userlogin update is successful')
 
-        if s <= 0:
             command = cur.mogrify("""
-                        INSERT INTO ncusr.userdetails (userid, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, octime, lmtime, entityid, countryid) 
-                        VALUES (%s,%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
-                        """,(userid, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, entityid, cntryid,))
+                        UPDATE ncusr.userdetails SET userkycstatus = %s, lmtime = CURRENT_TIMESTAMP 
+                        WHERE userid = %s AND sinuppan = %s AND entityid = %s AND countryid = %s;
+                        """,(kyc, userid, pan, entityid, cntryid,))
             print(command)
             cur, s1, f1 = db.mydbfunc(con,cur,command)
             s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
             s1, f1 = 0, None
 
             if s > 0:
-                s, f, t= errhand.get_status(s, 200, f, "SIGNUP update failed", t, "no")
-
-            print('Insert or update is successful')
-    
+                s, f, t= errhand.get_status(s, 200, f, "KYC userdetails table update failed", t, "no")
+            print('KYC ncusr.userdetails update is successful')
+        print (s)
         if s <= 0:
             con.commit()
-            #validate PAN adn store PAN number
-
-            response = {
-                'status': 'success',
-                'error_msg' : ''
-            }
-            resps = make_response(jsonify(response), 200)
-        else:
-            response = {
-                'status': 'fail',
-                'error_msg' : errhand.error_msg_reporting(s, t)
-            }
-            resps = make_response(jsonify(response), 400)
+            print("after commit")
+            
         
-        return resps
+        db.mydbcloseall(con,cur)
+        
+        if s <= 0:
+            kyc_sta = "success"
+            kyc_data = {
+                "pan": pan,
+                "pan_name": username,
+                "kyc_status": kyc,
+            }
+        else:
+            kyc_sta = "fail"
+            kyc_data = {
+                "pan": pan,
+                "pan_name": username,
+                "kyc_status": kyc,
+            }
 
+        return kyc_sta, kyc_data

@@ -3,6 +3,7 @@
 LIVE = 1
 
 SIGNUPURL = ["","http://localhost:4200/login/signup"]
+PANVALURL = ["","http://localhost:8082/panvali"]
 
 INSTALLDATA = [{},
 {

@@ -54,6 +54,7 @@ CREATE TABLE ncusr.userlogin (
                                                      -->  P - Portfolio tool [All user using tool are only Investors who must regiester directly in nawalcube] )
     userstatus		           varchar(2) NOT NULL, --> (S-Signup complted, Y - KYC NON COMPLIANT, R-Registration in progress, U-Registration done image upload pending,
                                                     --> P - Registration and upload done waiting to be active, A- Active, B-Blocked , I-Deleteduser)
+    kyc_compliant              varchar(2),           --> Y - Compliant, N -non-compliant        
     userstatlstupdt	           timestamptz NOT NULL,
     octime			           timestamptz NOT NULL,
     lmtime			           timestamptz NOT NULL,
@@ -160,15 +161,7 @@ CREATE TABLE ncapp.appusrauth (
     CONSTRAINT unq_comb_auauth UNIQUE (userauthtkn,appid) 
 );
 
-CREATE TABLE ncusr.appusrregdetail (
-    userid 		               varchar(100) NOT NULL REFERENCES ncusr.userlogin(userid),
-    regisdetails               text NOT NULL,
-    entityid                   varchar(20) NOT NULL,
-    countryid                  varchar(10) NOT NULL,
-    accessedcount              smallint NOT NULL,
-    octime			           timestamptz NOT NULL,
-    lmtime			           timestamptz NOT NULL
-);
+
 
 
 
