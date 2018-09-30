@@ -89,9 +89,14 @@ def mydbopncon():
 
 def mydbcloseall(con,cur):
 #close cursor and connection before exit
-    con.commit()
-    cur.close()
-    con.close()
+    try:
+        con
+    except NameError:
+        print("No active connection to close")
+    else:
+        con.commit()
+        cur.close()
+        con.close()
 
 def mydbbegin(con,cur):
     s = 0

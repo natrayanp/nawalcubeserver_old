@@ -80,6 +80,8 @@ def error_msg_reporting(s, t):
         client_error_msg = t if t else '' + "\n[server]Looks like a Data error.  Please contact Support"
     elif s == 200:
         client_error_msg = t if t else '' +  "\n[server]Oops...! Data base (Technical) error occured.  Please contact Support"
+    else:
+        client_error_msg = None
     
     print("log message to debug")
     print('@@@@@@@@@@@@@@@@@@@@@@@@@')

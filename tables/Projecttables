@@ -46,7 +46,7 @@ CREATE SCHEMA ncusr;
 
 ---Login table
 CREATE TABLE ncusr.userlogin (
-	userid 		               varchar(100) NOT NULL CONSTRAINT userid PRIMARY KEY,
+    userid 		               varchar(100) NOT NULL,
 	username    		       varchar(100),  --PAN name
     usertype			       varchar(2) NOT NULL, --> (R - Read only, W- Write)
     usercusttype               varchar(10) NOT NULL, --> (I - Investor, D - MFD, A - RIA, T - Trusted app,
@@ -66,6 +66,7 @@ CREATE TABLE ncusr.userlogin (
 -- User registration details
 CREATE TABLE ncusr.userdetails (
     userid 		               varchar(100) NOT NULL REFERENCES ncusr.userlogin(userid),
+    usercusttype               varchar(10) NOT NULL,
     sinupusername    		   varchar(100) NOT NULL,
     sinupadhaar                varchar(30),
     sinuppan                   varchar(10),

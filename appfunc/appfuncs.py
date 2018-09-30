@@ -654,26 +654,27 @@ def ncappsingupres():
         print("payload")
         print(payload)
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        # firebase auth setup
-        try:
-            print('inside try')
-            default_app = firebase_admin.get_app('natfbappsingup')
-            print('about inside try')
-        except ValueError:
-            print('inside value error')
-            #cred = credentials.Certificate(os.path.dirname(__file__)+'/serviceAccountKey.json')
-            cred = credentials.Certificate(sak.SERVICEAC)
-            default_app = firebase_admin.initialize_app(credential=cred,name='natfbappsingup')
-        else:
-            pass
 
-        print('app ready')        
-        email = payload["email"]            
-        user = auth.get_user_by_email(email,app=default_app)
-        print('Successfully fetched user data: {0}'.format(user.uid))
-        userid = user.uid
+        if payload["restyp"] == "success":
+            # firebase auth setup
+            try:
+                print('inside try')
+                default_app = firebase_admin.get_app('natfbappsingup')
+                print('about inside try')
+            except ValueError:
+                print('inside value error')
+                #cred = credentials.Certificate(os.path.dirname(__file__)+'/serviceAccountKey.json')
+                cred = credentials.Certificate(sak.SERVICEAC)
+                default_app = firebase_admin.initialize_app(credential=cred,name='natfbappsingup')
+            else:
+                pass
 
-        #dtoken = dtoken[0]
+            print('app ready')        
+            email = payload["email"]            
+            user = auth.get_user_by_email(email,app=default_app)
+            print('Successfully fetched user data: {0}'.format(user.uid))
+            userid = user.uid
+
         entityid = request.headers.get("entityid", None)
         cntryid = request.headers.get("countryid", None)
         appid = payload["appid"]
@@ -691,20 +692,25 @@ def ncappsingupres():
         usrmsg = None
         print("app details")
         print(app_details)
-        if resp_status == "success":
-            if app_data["result_data"] != None or app_data["result_data"] != "":
-                res_to_send = "success"
-                redir_ur = app_details["redirecturi"]
-                usrmsg = app_data["usrmsg"]
 
-        if res_to_send != "success":
-            res_to_send = "fail"
-            redir_ur = app_data["redirecturi"]
-            if app_data["usrmsg"] == '' or app_data["usrmsg"] == None:
-                usrmsg = "App id not registered with nawalcube"
-            else:
-                usrmsg = app_data["usrmsg"]
+        if payload["restyp"] == "success":
+            if resp_status == "success":
+                if app_data["result_data"] != None or app_data["result_data"] != "":
+                    res_to_send = "success"
+                    redir_ur = app_details["redirecturi"]
+                    usrmsg = app_data["usrmsg"]
 
+            if res_to_send != "success":
+                res_to_send = "fail"
+                redir_ur = app_data["redirecturi"]
+                if app_data["usrmsg"] == '' or app_data["usrmsg"] == None:
+                    usrmsg = "App id not registered with nawalcube"
+                else:
+                    usrmsg = app_data["usrmsg"]
+        else:
+            res_to_send = "fail" 
+            usrmsg = payload["msg"]
+            
 
         if res_to_send == "success":
             # Generate authtoken for the user as this is trusted app.  
@@ -727,6 +733,8 @@ def ncappsingupres():
             else:
                 ath_tkn_status = "fail"
                 usrmsg = "User registration key generation failed.  Contact support."
+        else:
+            ath_tkn_status = "fail"
 
         if res_to_send != "success" or ath_tkn_status != "success":
             urls = {
@@ -735,7 +743,6 @@ def ncappsingupres():
         response1 = make_response(jsonify(urls), 200)
         print("end of inside ncappsingupres POST")
         print(response1)
-        print("#########################################################################################################")
         return response1
 
 

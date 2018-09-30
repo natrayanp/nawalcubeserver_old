@@ -438,7 +438,6 @@ def signup():
         return response1
 
     elif request.method=="POST":
-        print("#########################################################################################################")
         print("inside signup POST")
         s = 0
         f = None
@@ -467,20 +466,20 @@ def signup():
         }
 
         respo = signup_common(sign_data)
-
+        print("respo")
+        print(respo)
         if respo["status"] == "success":
-            response = {
+            respm = {
                 'status': respo["status"],
-                'error_msg' : ''
+                'error_msg' : respo["error_msg"]
             }
-            resps = make_response(jsonify(response), 200)
+            resps = make_response(jsonify(respm), 200)
         else:
-            response = {
+            respm = {
                 'status': respo["status"],
-                'error_msg' : errhand.error_msg_reporting(s, t)
+                'error_msg' : respo["error_msg"]
             }
-            resps = make_response(jsonify(response), 400)
-        print("#########################################################################################################")
+            resps = make_response(jsonify(respm), 400)
         return resps
 
 
@@ -494,7 +493,6 @@ def signupnotkn():
         return response1
 
     elif request.method=="POST":
-        print("#########################################################################################################")
         print("inside signupnotkn POST")
         s = 0
         f = None
@@ -519,19 +517,20 @@ def signupnotkn():
         }
 
         respo = signup_common(sign_data)
+        print("respo")
         print(respo)
         if respo["status"] == "success":
-            response = {
+            respm = {
                 'status': respo["status"],
-                'error_msg' : ''
+                'error_msg' : respo["error_msg"]
             }
-            resps = make_response(jsonify(response), 200)
+            resps = make_response(jsonify(respm), 200)
         else:
-            response = {
+            respm = {
                 'status': respo["status"],
-                'error_msg' : errhand.error_msg_reporting(s, t)
+                'error_msg' : respo["error_msg"]
             }
-            resps = make_response(jsonify(response), 400)
+            resps = make_response(jsonify(respm), 400)
         return resps
 
 
@@ -583,7 +582,7 @@ def signup_common(sign_data):
         sinuparn = payload['arn']
     else:
         sinuparn = None
-        if usercusttype not in ['I']:                    
+        if usercusttype not in ["I","P"]:                    
             s, f, t= errhand.get_status(s, 100, f, "No arn from client", t, "yes")
 
     if payload.get("mobile", None) != None:
@@ -629,6 +628,7 @@ def signup_common(sign_data):
 
     usertype='W'
     userstatus = 'S'
+    uid= None
     print(sinupadhaar,sinuppan,sinuparn,sinupmobile)
     if s <= 0:
         # firebase auth setup
@@ -716,6 +716,42 @@ def signup_common(sign_data):
         
 
     if s <= 0:
+
+        sql = "SELECT json_agg(a) FROM ("
+        sql = sql + "SELECT l.userid, l.username, l.usertype, l.usercusttype, l.entityid, "
+        sql = sql + "d.sinupusername, d.sinupadhaar, d.sinuppan, d.sinupmobile, d.sinupemail, d.sinuparn "
+        sql = sql + "FROM ncusr.userlogin l "
+        sql = sql + "LEFT JOIN ncusr.userdetails d ON l.userid = d.userid AND l.entityid = d.entityid "
+        sql = sql + "WHERE l.userstatus != 'I' "
+
+        if usercusttype not in ["D","A"]:
+            if uid != None or uid != '':
+                sql = sql + "AND (l.userid = %s or d.sinupadhaar = %s OR d.sinuppan = %s OR d.sinupmobile = %s OR d.sinupemail = %s) "
+            else:
+                sql = sql + "AND (d.sinupadhaar = %s OR d.sinuppan = %s OR d.sinupmobile = %s OR d.sinupemail = %s) "
+
+
+        if usercusttype in ["D","A"]:
+            if uid != None or uid != '':
+                sql = sql + "AND (l.userid = %s or d.sinuparn = %s) "
+            else:
+                sql = sql + "AND sinuparn = %s "
+        
+        sql = sql + "AND l.entityid = %s AND l.countryid = %s) as a"
+
+        if usercusttype not in ["D","A"]:
+            if uid != None or uid != '':
+                command = cur.mogrify(sql,(uid,sinupadhaar,sinuppan,sinupmobile,sinupemail,entityid,countryid,))
+            else:    
+                command = cur.mogrify(sql,(sinupadhaar,sinuppan,sinupmobile,sinupemail,entityid,countryid,))
+
+        if usercusttype in ["D","A"]:
+            if uid != None or uid != '':
+                command = cur.mogrify(sql,(uid,sinuparn,entityid,countryid,))
+            else:
+                command = cur.mogrify(sql,(sinuparn,entityid,countryid,))
+
+        '''
         command = cur.mogrify("""
                                 SELECT json_agg(a) FROM (
                                 SELECT l.userid, l.username, l.usertype, l.usercusttype, l.entityid, 
@@ -729,6 +765,7 @@ def signup_common(sign_data):
                                 AND l.entityid = %s AND l.countryid = %s
                                 ) as a
                             """,(uid,sinupadhaar,sinuppan,sinuparn,sinupmobile,sinupemail,entityid,countryid,) )
+        '''
         print(command)
         cur, s1, f1 = db.mydbfunc(con,cur,command)
         s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
@@ -746,35 +783,23 @@ def signup_common(sign_data):
         db_json_rec = cur.fetchall()[0][0]
         print(db_json_rec)
 
-        if db_json_rec:
-            for rec in db_json_rec:
-                if rec['userid'] != '':
-                    if rec['userid'] == userid:
-                        s, f, t= errhand.get_status(s, 100, f, "Userid Already exists", t, "yes")
-                        
+        #validate 
+        pyld = {
+                "userid" : userid,
+                "sinupadhaar" : sinupadhaar,
+                "sinuppan" : sinuppan,
+                "sinuparn" : sinuparn,
+                "sinupmobile" : sinupmobile,
+                "sinupemail" : sinupemail,
+                "usercusttype" : usercusttype
+        }
 
-                if rec['sinupadhaar'] != '':           
-                    if rec['sinupadhaar'] == sinupadhaar:
-                        s, f, t= errhand.get_status(s, 100, f, "Adhaar Already registered", t, "yes")
+        reg_status, reg_data = allow_regis_user(db_json_rec, pyld)
+        print(reg_status)
+        print(reg_data)
+        if reg_status == "fail":
+            s, f, t= errhand.get_status(s, 100, f, reg_data, t, "yes")
 
-                if rec['sinuppan'] != '':
-                    if rec['sinuppan'] == sinuppan:
-                        s, f, t= errhand.get_status(s, 100, f, "PAN Already registered", t, "yes")
-
-                if rec['sinuparn'] != '':
-                    pan_payload = {"pan": rec['sinuppan']}
-                    if rec['sinuparn'] == sinuppan:
-                        s, f, t= errhand.get_status(s, 100, f, "ARN Already registered", t, "yes")
-
-                if rec['sinupmobile'] != '':
-                    if rec['sinupmobile'] == sinupmobile:
-                        s, f, t= errhand.get_status(s, 100, f, "Mobile Already registered", t, "yes")
-
-                if rec['sinupemail'] != '':
-                    if rec['sinupemail'] == sinupemail:
-                        s, f, t= errhand.get_status(s, 100, f, "Email Already registered", t, "yes")
-        else:
-            print("no records satifying the current user inputs")
     print(s,f)
         
     if s <= 0:
@@ -800,9 +825,9 @@ def signup_common(sign_data):
 
     if s <= 0:
         command = cur.mogrify("""
-                    INSERT INTO ncusr.userdetails (userid, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, octime, lmtime, entityid, countryid) 
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
-                    """,(userid, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, entityid, countryid,))
+                    INSERT INTO ncusr.userdetails (userid, usercusttype, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, octime, lmtime, entityid, countryid) 
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
+                    """,(userid, usercusttype, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, entityid, countryid,))
         print(command)
         cur, s1, f1 = db.mydbfunc(con,cur,command)
         s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
@@ -816,21 +841,21 @@ def signup_common(sign_data):
     if s <= 0:
         con.commit()
 
-    #Always run pan Payload as long as we have value for pan etc.
-    pan_payload = {
-        "userid" : userid,
-        "entityid" : entityid,
-        "cntryid" : countryid,
-        "pan" : sinuppan
-    }
+    if s <= 0:
+        pan_payload = {
+            "userid" : userid,
+            "entityid" : entityid,
+            "cntryid" : countryid,
+            "pan" : sinuppan
+        }
 
-    status, kyc_data = kyc_detail_update(pan_payload)
+        status, kyc_data = kyc_detail_update(pan_payload)
 
-    print(kyc_data)
-    if status == "success":
-        s, f, t = errhand.get_status(s, 0, f, "KYC update success", t, "no")
-    else:
-        s, f, t = errhand.get_status(s, 0, f, "KYC update failed", t, "no")
+        print(kyc_data)
+        if status == "success":
+            s, f, t = errhand.get_status(s, 0, f, "KYC update success", t, "no")
+        else:
+            s, f, t = errhand.get_status(s, 0, f, "KYC update failed", t, "no")
     
 
     
@@ -848,8 +873,65 @@ def signup_common(sign_data):
             'error_msg' : errhand.error_msg_reporting(s, t)
         }
         #resps = make_response(jsonify(response), 400)
+    print (response)
     print("#########################################################################################################")
     return response
+
+
+
+def allow_regis_user(db_json_rec, pyld):
+    print("inside allow_regis_user")
+    s = 0
+    f = None
+    t = None #message to front end
+    stat = "success"
+    usrmsg = None
+
+    if db_json_rec:
+        for rec in db_json_rec:
+            if rec['userid'] != '':
+                if rec['userid'] == pyld["userid"]:
+                    s, f, t= errhand.get_status(s, 100, f, "Userid Already exists for the Email id", t, "yes")                  
+                    stat = "fail"
+
+            if rec['sinupemail'] != '':
+                if rec['sinupemail'] == pyld["sinupemail"]:
+                    s, f, t= errhand.get_status(s, 100, f, "Email Already registered", t, "yes")
+                    stat = "fail"
+
+            if stat != "fail":
+                if rec['sinupadhaar'] != '':           
+                    if rec['sinupadhaar'] == pyld["sinupadhaar"]:
+                        s, f, t= errhand.get_status(s, 100, f, "Adhaar Already registered", t, "no")
+
+                if rec['sinuppan'] != '':
+                    if rec['sinuppan'] == pyld["sinuppan"]:
+                        s, f, t= errhand.get_status(s, 100, f, "PAN Already registered", t, "no")
+
+                if rec['sinuparn'] != '':                
+                    if rec['sinuparn'] == pyld["sinuparn"]:
+                        s, f, t= errhand.get_status(s, 100, f, "ARN Already registered", t, "no")
+
+                if rec['sinupmobile'] != '':
+                    if rec['sinupmobile'] == pyld["sinupmobile"]:
+                        s, f, t= errhand.get_status(s, 100, f, "Mobile Already registered", t, "no")
+                
+                if s > 0: #incase one of the above already exists
+                    if rec["usercusttype"] == pyld["usercusttype"]:
+                        s, f, t= errhand.get_status(s, 100, f, "Userid Already exists with same Adhaar/PAN/ARN/MOBILE for selected cust type (ie...Resigter as)", t, "yes")
+                        stat = "fail"
+
+    else:
+        print("no records satifying the current user inputs")
+
+    print(pyld)
+    print(db_json_rec)
+
+    if stat == "fail":
+        usrmsg = errhand.error_msg_reporting(s, t)
+
+    return stat, usrmsg
+
 
 
 @bp_login.route("/kycupdate",methods=["GET","POST","OPTIONS"])
