@@ -151,7 +151,12 @@ def app_register(criteria_json):
             else:
                 appid = None
                 appkey = None
-            
+        
+        if appusertype == 'T':
+            approved = 'N'
+        else:
+            approved = 'Y'
+    
     print(appid,"oiipoi", appkey)
     cur_time = datetime.now().strftime('%Y%m%d%H%M%S')
     print(appname,appusertype,redirecturi,postbackuri,description,starmfdet)
@@ -254,9 +259,9 @@ def app_register(criteria_json):
 
         if s <= 0:
             command = cur.mogrify("""
-                        INSERT INTO ncapp.appdetail (appname, appusertype, redirecturi, postbackuri, description, starmfdet, appid, appkey, expirydate, product, delflg, appuserid, octime, lmtime, entityid, countryid) 
-                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,CURRENT_DATE + INTERVAL'1 month', %s, 'N',%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
-                        """,(appname, appusertype, redirecturi, postbackuri, description, starmfdet, appid, appkey, product, userid, entityid, cntryid,))
+                        INSERT INTO ncapp.appdetail (appname, appusertype, redirecturi, postbackuri, description, starmfdet, appid, appkey, expirydate, approved, product, delflg, appuserid, octime, lmtime, entityid, countryid) 
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,CURRENT_DATE + INTERVAL'1 month', %s, %s, 'N',%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
+                        """,(appname, appusertype, redirecturi, postbackuri, description, starmfdet, appid, appkey, approved, product, userid, entityid, cntryid,))
             print(command)
             print(appname,appusertype,redirecturi,postbackuri,description,starmfdet,userid)
             cur, s1, f1 = db.mydbfunc(con,cur,command)
@@ -477,7 +482,12 @@ def app_detail_fetch(criteria_json):
         if appid == None:
             command = cur.mogrify("""
                                     SELECT json_agg(a) FROM (
-                                    SELECT * FROM ncapp.appdetail                                
+                                    SELECT *,
+                                            CASE 
+                                            WHEN expirydate < CURRENT_TIMESTAMP THEN 'EXPIRED'
+                                            ELSE 'ACTIVE'
+                                            END AS appexp
+                                    FROM ncapp.appdetail                                
                                     WHERE appuserid = %s AND entityid = %s AND countryid = %s
                                     AND delflg = 'N'
                                     ) as a
@@ -485,7 +495,12 @@ def app_detail_fetch(criteria_json):
         elif userid == None:
             command = cur.mogrify("""
                                     SELECT json_agg(a) FROM (
-                                    SELECT * FROM ncapp.appdetail                                
+                                    SELECT *,
+                                            CASE 
+                                            WHEN expirydate < CURRENT_TIMESTAMP THEN 'EXPIRED'
+                                            ELSE 'ACTIVE'
+                                            END AS appexp                                    
+                                    FROM ncapp.appdetail                                
                                     WHERE appid = %s AND entityid = %s AND countryid = %s
                                     AND delflg = 'N'
                                     ) as a
@@ -493,7 +508,12 @@ def app_detail_fetch(criteria_json):
         else:
             command = cur.mogrify("""
                                     SELECT json_agg(a) FROM (
-                                    SELECT * FROM ncapp.appdetail                                
+                                    SELECT *,
+                                            CASE 
+                                            WHEN expirydate < CURRENT_TIMESTAMP THEN 'EXPIRED'
+                                            ELSE 'ACTIVE'
+                                            END AS appexp                                    
+                                    FROM ncapp.appdetail                                
                                     WHERE appuserid = %s AND entityid = %s AND countryid = %s AND appid = %s
                                     AND delflg = 'N'
                                     ) as a
@@ -620,6 +640,10 @@ def other_app_register(criteria_json):
             else:
                 res_to_send = "fail"
                 usrmsg = "App is not a Trusted app"
+
+            if app_details["approved"] == "N":
+                res_to_send = "fail"
+                usrmsg = "App is not a Approved app"
         else:
             usrmsg = "This is not a registered app"
 
@@ -875,6 +899,7 @@ def fetch_app_data_only_wth_tkn(criteria_json):
                                 FROM ncapp.appdetail
                                 WHERE appid = %s AND appkey = %s
                                 AND entityid = %s AND countryid = %s
+                                AND delflg != 'Y'
                                 ) as a
                             """,(appid, appkey, config.INSTALLDATA[config.LIVE]["entityid"],config.INSTALLDATA[config.LIVE]["countryid"],) )
         print(command)
@@ -900,8 +925,10 @@ def fetch_app_data_only_wth_tkn(criteria_json):
             s, f, t= errhand.get_status(s, 100, f, "App id is not valid", t, "yes")            
         else:
             app_db_rec = app_db_rec[0]
-            print("App id verified successfully")
-            pass            
+            if app_db_rec["approved"] == 'N':
+                s, f, t= errhand.get_status(s, 100, f, "App id not approved yet", t, "yes")
+            else:                
+                print("App id verified successfully")
     
     print(s,f)
 

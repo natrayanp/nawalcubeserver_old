@@ -106,7 +106,7 @@ def fn_appname(criteria_json):
                                 SELECT json_agg(a) FROM (
                                 SELECT *
                                 FROM ncapp.appdetail
-                                WHERE delflg != 'Y' AND expirydate >= CURRENT_DATE
+                                WHERE delflg != 'Y' AND expirydate >= CURRENT_DATE AND approved != 'N'
                                 AND appid = %s AND redirecturi = %s
                                 AND entityid = %s AND countryid = %s
                                 ) as a
@@ -287,7 +287,7 @@ def app_userauth(criteria_json):
                                 SELECT json_agg(a) FROM (
                                 SELECT *
                                 FROM ncapp.appdetail
-                                WHERE delflg != 'Y' AND expirydate >= CURRENT_DATE
+                                WHERE delflg != 'Y' AND expirydate >= CURRENT_DATE AND approved != 'N'
                                 AND appid = %s AND redirecturi = %s
                                 AND entityid = %s AND countryid = %s
                                 ) as a

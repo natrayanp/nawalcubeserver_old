@@ -48,8 +48,8 @@ CREATE SCHEMA ncusr;
 CREATE TABLE ncusr.userlogin (
     userid 		               varchar(100) NOT NULL,
 	username    		       varchar(100),  --PAN name
-    usertype			       varchar(2) NOT NULL, --> (R - Read only, W- Write)
-    usercusttype               varchar(10) NOT NULL, --> (I - Investor, D - MFD, A - RIA, T - Trusted app,
+    usertype			       varchar(2) NOT NULL, --> (A - Admin, R - Read only, W- Write)
+    usercusttype               varchar(10) NOT NULL, --> (A - Admin, I - Investor, D - MFD, A - RIA, T - Trusted app,
                                                      -->  Derived users TI,AI, DI- investor in trusted/Distributor/Advisor's app, 
                                                      -->  P - Portfolio tool [All user using tool are only Investors who must regiester directly in nawalcube] )
     userstatus		           varchar(2) NOT NULL, --> (S-Signup complted, Y - KYC NON COMPLIANT, R-Registration in progress, U-Registration done image upload pending,
@@ -114,6 +114,7 @@ CREATE TABLE ncapp.appdetail (
     appid                      text,
     appkey                     text,
     expirydate                 date NOT NULL,
+    approved                   varchar(2) NOT NULL, --> Y - Approved, N - Not approved only for Trusted app
     product                    varchar(30) NOT NULL,
     delflg                     varchar(1), --> Y - Deleted, N - Not Deleted
     appuserid 		           varchar(100) NOT NULL REFERENCES ncusr.userlogin(userid),
