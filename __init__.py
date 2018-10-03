@@ -16,10 +16,12 @@ from nawalcube_server.authentication import bp_auth, bp_login
 from nawalcube_server.authentication import auth
 from nawalcube_server.authentication import login
 from nawalcube_server.appfunc import appfuncs, appauth, bp_appfunc
+from nawalcube_server.installation import bp_install, admin_cust_claim
 
 app.register_blueprint(bp_flow)
 app.register_blueprint(bp_auth)
 app.register_blueprint(bp_login)
 app.register_blueprint(bp_appfunc)
+app.register_blueprint(bp_install)
 
 
