@@ -678,7 +678,6 @@ def ncappsingupres():
         print("payload")
         print(payload)
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-
         if payload["restyp"] == "success":
             # firebase auth setup
             try:
@@ -716,7 +715,7 @@ def ncappsingupres():
         usrmsg = None
         print("app details")
         print(app_details)
-
+        print(payload)
         if payload["restyp"] == "success":
             if resp_status == "success":
                 if app_data["result_data"] != None or app_data["result_data"] != "":

@@ -308,7 +308,8 @@ def app_userauth(criteria_json):
     if s <= 0:
         app_db_rec = cur.fetchall()[0][0]
         print(app_db_rec)
-        print(len(app_db_rec))
+        if app_db_rec != None:
+            print(len(app_db_rec))
     
         if app_db_rec == None or len(app_db_rec) < 1:
             s, f, t= errhand.get_status(s, 100, f, "Unable to locate the app id", t, "yes")            
@@ -410,7 +411,8 @@ def app_userauth(criteria_json):
     
     print(s,f, t)
 
-    appusrtype = app_db_rec.get("appusertype", None)
+
+    appusrtype = None if app_db_rec == None else app_db_rec.get("appusertype", None)
 
     if appusrtype == None:
         s, f, t= errhand.get_status(s, 200, f, "app user type is not known", t, "yes")

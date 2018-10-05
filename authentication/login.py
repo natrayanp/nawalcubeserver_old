@@ -541,10 +541,18 @@ def signup_common(sign_data):
     f = None
     t = None #message to front end
     response = None
+    failed_only_here = False
+
     print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
     payload = sign_data["payload"]["signup_frm"]
     usr_payload = sign_data["payload"]["usrpass_frm"]
+
+    if sign_data["payload"].get("otherapp", None) != None:
+        otherapp = sign_data["payload"]['otherapp']
+    else:
+        otherapp = None
+        s, f, t= errhand.get_status(s, 100, f, "other app identifier not sent", t, "no")
 
     if sign_data.get("typeoper", None) != None:
         typeoper = sign_data['typeoper']
@@ -665,6 +673,7 @@ def signup_common(sign_data):
             email = decoded_token.get("email", None)
     
     elif typeoper == "signupnotkn" and s <= 0:
+        print("inside signupnotkn")
         try:
             user = auth.get_user_by_email(email,app=default_app)
         except AuthError:
@@ -778,6 +787,7 @@ def signup_common(sign_data):
             s, f, t = errhand.get_status(s, 200, f, "User data fetch failed with DB error", t, "no")
     print(s,f)
     pan_payload = None
+    
 
     if s <= 0:
         db_json_rec = cur.fetchall()[0][0]
@@ -794,13 +804,17 @@ def signup_common(sign_data):
                 "usercusttype" : usercusttype
         }
 
-        reg_status, reg_data = allow_regis_user(db_json_rec, pyld)
+        reg_status, reg_data = allow_regis_user(db_json_rec, pyld, otherapp)
         print(reg_status)
         print(reg_data)
         if reg_status == "fail":
-            s, f, t= errhand.get_status(s, 100, f, reg_data, t, "yes")
+            if s <= 0 and otherapp:
+                failed_only_here = True
+            s, f, t= errhand.get_status(s, 110, f, reg_data, t, "yes")
 
     print(s,f)
+    print("##########failed_only_here#############")
+    print(failed_only_here)
         
     if s <= 0:
         s1, f1 = db.mydbbegin(con, cur)
@@ -863,15 +877,21 @@ def signup_common(sign_data):
 
     if s <= 0:
         response = {
-            'status': 'success',
-            'error_msg' : ''
-        }
+                'status': 'success',
+                'error_msg' : ''
+            }
         #resps = make_response(jsonify(response), 200)
     else:
-        response = {
-            'status': 'fail',
-            'error_msg' : errhand.error_msg_reporting(s, t)
-        }
+        if otherapp and failed_only_here:
+            response = {
+                'status': 'success',
+                'error_msg' : ''
+            }
+        else:
+            response = {
+                'status': 'fail',
+                'error_msg' : errhand.error_msg_reporting(s, t)
+            }
         #resps = make_response(jsonify(response), 400)
     print (response)
     print("#########################################################################################################")
@@ -879,7 +899,7 @@ def signup_common(sign_data):
 
 
 
-def allow_regis_user(db_json_rec, pyld):
+def allow_regis_user(db_json_rec, pyld, otherapp):
     print("inside allow_regis_user")
     s = 0
     f = None
@@ -982,9 +1002,18 @@ def kyc_detail_update(pan_data):
 
         #Get PAN validated and the PAN data
         if pan_payload != None:
-            r = requests.post(configs.PANVALURL[configs.LIVE], data=json.dumps(pan_payload))
-            pan_data = json.loads(r.content)
-            print(json.loads(r.content))
+            try:
+                r = requests.post(configs.PANVALURL[configs.LIVE], data=json.dumps(pan_payload))
+            except requests.exceptions.Timeout:
+                print("timeout exception with panvalidation")
+                pan_data = {"pan_name": None, "kyc_status": None}
+            except requests.exceptions.RequestException as e:
+                print("exception with panvalidation")
+                print(e)
+                pan_data = {"pan_name": None, "kyc_status": None}
+            else:
+                pan_data = json.loads(r.content)
+                print(json.loads(r.content))
 
             if pan_data["pan_name"] != None:
                 username = pan_data["pan_name"]
