@@ -804,7 +804,7 @@ def signup_common(sign_data):
                 "usercusttype" : usercusttype
         }
 
-        reg_status, reg_data = allow_regis_user(db_json_rec, pyld, otherapp)
+        reg_status, reg_data, insert_or_not = allow_regis_user(db_json_rec, pyld, otherapp)
         print(reg_status)
         print(reg_data)
         if reg_status == "fail":
@@ -813,7 +813,6 @@ def signup_common(sign_data):
             s, f, t= errhand.get_status(s, 110, f, reg_data, t, "yes")
 
     print(s,f)
-    print("##########failed_only_here#############")
     print(failed_only_here)
         
     if s <= 0:
@@ -906,51 +905,190 @@ def allow_regis_user(db_json_rec, pyld, otherapp):
     t = None #message to front end
     stat = "success"
     usrmsg = None
+    insert_rec = False
+    email_exist = False
+    userid_exist = False
+    eusrm = ""
+    
+    for rec in db_json_rec:
 
-    if db_json_rec:
-        for rec in db_json_rec:
+        if rec['sinupemail'] != '':
+            if rec['sinupemail'] == pyld["sinupemail"]:
+                #usrm = "Email Already registered" if usrm == None else usrm + " | Email Already registered"
+                email_exist = True  # All other values should match
+                eusrm = "Email Already registered"
+            else:
+                email_exist = False # All other values should not exists in rec
+                eusrm = ""
+
+        if otherapp:            
+            if email_exist:
+                all_rec_match, usrmg = chk_if_value_match(rec, pyld, "all", "yes")
+                if all_rec_match:
+                    stat = "success"
+                    usrmsg = usrmg  #--> ""
+                    # Don't insert
+                    break
+                else:
+                    stat = "fail"
+                    usrmsg = eusrm + "but " + usrmg #--> failed reason
+                    # Don't insert
+                    break
+            else:
+                any_rec_match, usrmg = chk_if_value_match(rec, pyld, "any", "yes")
+                if any_rec_match:
+                    stat = "fail"
+                    usrmsg = usrmg #--> failed reason
+                    # Don't insert
+                    break
+                else:
+                    stat = "success"
+                    usrmsg = usrmg #--> ""
+                    insert_rec = True
+                    # insert
+        else:           
             if rec['userid'] != '':
                 if rec['userid'] == pyld["userid"]:
-                    s, f, t= errhand.get_status(s, 100, f, "Userid Already exists for the Email id", t, "yes")                  
+                    #usrms = "Userid Already exists for the Email id" if usrm == None else usrm + " | Userid Already exists for the Email id"
+                    userid_exist = True
+                else:
+                    all_rec_match = False
+                    userid_exist = False
+                    #usrmf = "Userid doesn't exists for the Email id" if usrmf == None else usrmf + " | Userid doesn't exists for the Email id"
+
+            if email_exist or userid_exist:
+                # email already registered or userid already exists
+                eusrm = "Email Already registered" if email_exist else ""
+                uusrm = "Userid Already exists" if userid_exist else ""
+                stat = "fail"
+                usrmsg = eusrm + " " + uusrm
+                break
+                # Don't insert
+
+            elif not email_exist and not userid_exist:
+                # email not registered and userid not exists
+                any_rec_match, usrmg = chk_if_value_match(rec, pyld, "any", "no")
+                if any_rec_match:
+                    # email not registered and userid not exists but pan or adhaar or mobile exists
                     stat = "fail"
+                    usrmsg = usrmg
+                    break
+                    # Don't insert
+                else:
+                    # email not registered and userid not exists and pan,adhaar,mobile not exists
+                    stat = "success"
+                    usrmsg = ""
+                    insert_rec = True
+                    # insert
 
-            if rec['sinupemail'] != '':
-                if rec['sinupemail'] == pyld["sinupemail"]:
-                    s, f, t= errhand.get_status(s, 100, f, "Email Already registered", t, "yes")
-                    stat = "fail"
+        
+    return stat, usrmsg, insert_rec
 
-            if stat != "fail":
-                if rec['sinupadhaar'] != '':           
-                    if rec['sinupadhaar'] == pyld["sinupadhaar"]:
-                        s, f, t= errhand.get_status(s, 100, f, "Adhaar Already registered", t, "no")
 
-                if rec['sinuppan'] != '':
-                    if rec['sinuppan'] == pyld["sinuppan"]:
-                        s, f, t= errhand.get_status(s, 100, f, "PAN Already registered", t, "no")
+def chk_if_value_match(rec, pyld, find = "any", include_usr_val = "yes"):
+    all_rec_match = True
+    any_rec_match = False
 
-                if rec['sinuparn'] != '':                
-                    if rec['sinuparn'] == pyld["sinuparn"]:
-                        s, f, t= errhand.get_status(s, 100, f, "ARN Already registered", t, "no")
+    if include_usr_val == "yes":
+        if rec['userid'] != '':
+            if rec['userid'] == pyld["userid"]:
+                usrms = "Userid Already exists for the Email id" if usrm == None else usrm + " | Userid Already exists for the Email id"
+                all_rec_match = True if all_rec_match else False
+                any_rec_match = True
+            else:
+                all_rec_match = False
+                usrmf = "Userid doesn't exists for the Email id" if usrmf == None else usrmf + " | Userid doesn't exists for the Email id"
 
-                if rec['sinupmobile'] != '':
-                    if rec['sinupmobile'] == pyld["sinupmobile"]:
-                        s, f, t= errhand.get_status(s, 100, f, "Mobile Already registered", t, "no")
-                
-                if s > 0: #incase one of the above already exists
-                    if rec["usercusttype"] == pyld["usercusttype"]:
-                        s, f, t= errhand.get_status(s, 100, f, "Userid Already exists with same Adhaar/PAN/ARN/MOBILE for selected cust type (ie...Resigter as)", t, "yes")
-                        stat = "fail"
+    if rec['sinupadhaar'] != '':
+        if rec['sinupadhaar'] == pyld["sinupadhaar"]:
+            usrms = "Adhaar Already registered" if usrms == None else usrms + " | Adhaar Already registered"
+            all_rec_match = True if all_rec_match else False
+            any_rec_match = True
+        else:
+            all_rec_match = False
+            usrmf = "Adhaar doesn't registered" if usrmf == None else usrmf + " | Adhaar doesn't registered"
 
-    else:
-        print("no records satifying the current user inputs")
+    if rec['sinuppan'] != '':
+        if rec['sinuppan'] == pyld["sinuppan"]:
+            usrms = "PAN Already registered" if usrms == None else usrms + " | PAN Already registered"
+            all_rec_match = True if all_rec_match else False
+            any_rec_match = True
+        else:
+            all_rec_match = False
+            usrmf = "PAN doesn't registered" if usrmf == None else usrmf + " | PAN doesn't registered"
 
-    print(pyld)
-    print(db_json_rec)
+    if rec['sinuparn'] != '':
+        if rec['sinuparn'] == pyld["sinuparn"]:
+            usrms = "ARN Already registered" if usrms == None else usrms + " | ARN Already registered"
+            all_rec_match = True if all_rec_match else False
+            any_rec_match = True
+        else:
+            all_rec_match = False
+            usrmf = "ARN doesn't registered" if usrmf == None else usrmf + " | ARN doesn't registered"
 
-    if stat == "fail":
-        usrmsg = errhand.error_msg_reporting(s, t)
+    if rec['sinupmobile'] != '':
+        if rec['sinupmobile'] == pyld["sinupmobile"]:
+            usrms = "Mobile Already registered" if usrms == None else usrms + " | Mobile Already registered"
+            all_rec_match = True if all_rec_match else False
+            any_rec_match = True
+        else:
+            all_rec_match = False
+            usrmf = "Mobile doesn't registered" if usrmf == None else usrmf + " | Mobile doesn't registered"
 
-    return stat, usrmsg
+    if find == "all":
+        rec_match = all_rec_match
+        if all_rec_match:
+            usrmsg = ""
+        else:
+            usrmsg = usrmf
+
+    if find == "any":
+        rec_match = any_rec_match
+        if any_rec_match:            
+            usrmsg = usrms
+        else:
+            usrmsg = ""
+
+
+    return rec_match, usrmg
+
+def validate_app(rec,pyld):
+
+    if rec['sinupemail'] != '':
+        if rec['sinupemail'] == pyld["sinupemail"]:
+            if not otherapp:
+                s, f, t= errhand.get_status(s, 100, f, "Email Already registered", t, "yes")
+                stat = "fail"                
+
+    if rec['userid'] != '':
+        if rec['userid'] == pyld["userid"]:
+            s, f, t= errhand.get_status(s, 100, f, "Userid Already exists for the Email id", t, "yes")                  
+            stat = "fail"
+
+    if stat != "fail":
+        if rec['sinupadhaar'] != '':           
+            if rec['sinupadhaar'] == pyld["sinupadhaar"]:
+                s, f, t= errhand.get_status(s, 100, f, "Adhaar Already registered", t, "no")
+
+        if rec['sinuppan'] != '':
+            if rec['sinuppan'] == pyld["sinuppan"]:
+                s, f, t= errhand.get_status(s, 100, f, "PAN Already registered", t, "no")
+
+        if rec['sinuparn'] != '':                
+            if rec['sinuparn'] == pyld["sinuparn"]:
+                s, f, t= errhand.get_status(s, 100, f, "ARN Already registered", t, "no")
+
+        if rec['sinupmobile'] != '':
+            if rec['sinupmobile'] == pyld["sinupmobile"]:
+                s, f, t= errhand.get_status(s, 100, f, "Mobile Already registered", t, "no")
+        
+        if s > 0: #incase one of the above already exists
+            if rec["usercusttype"] == pyld["usercusttype"]:
+                s, f, t= errhand.get_status(s, 100, f, "Userid Already exists with same Adhaar/PAN/ARN/MOBILE for selected cust type (ie...Resigter as)", t, "yes")
+                stat = "fail"
+
+
+
 
 
 
@@ -1086,3 +1224,4 @@ def kyc_detail_update(pan_data):
             }
 
         return kyc_sta, kyc_data
+
