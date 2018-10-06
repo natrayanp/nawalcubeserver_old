@@ -788,71 +788,81 @@ def signup_common(sign_data):
     print(s,f)
     pan_payload = None
     
+    othapp_res_stat = "success"
+    usrmsg = "" 
+    insert_or_not = True
 
     if s <= 0:
         db_json_rec = cur.fetchall()[0][0]
         print(db_json_rec)
 
-        #validate 
-        pyld = {
-                "userid" : userid,
-                "sinupadhaar" : sinupadhaar,
-                "sinuppan" : sinuppan,
-                "sinuparn" : sinuparn,
-                "sinupmobile" : sinupmobile,
-                "sinupemail" : sinupemail,
-                "usercusttype" : usercusttype
-        }
+        if db_json_rec != None:
+            #validate 
+            pyld = {
+                    "userid" : userid,
+                    "sinupadhaar" : sinupadhaar,
+                    "sinuppan" : sinuppan,
+                    "sinuparn" : sinuparn,
+                    "sinupmobile" : sinupmobile,
+                    "sinupemail" : sinupemail,
+                    "usercusttype" : usercusttype
+            }
 
-        reg_status, reg_data, insert_or_not = allow_regis_user(db_json_rec, pyld, otherapp)
-        print(reg_status)
-        print(reg_data)
-        if reg_status == "fail":
-            if s <= 0 and otherapp:
-                failed_only_here = True
-            s, f, t= errhand.get_status(s, 110, f, reg_data, t, "yes")
+            othapp_res_stat, usrmsg, insert_or_not = allow_regis_user(db_json_rec, pyld, otherapp)
 
-    print(s,f)
-    print(failed_only_here)
-        
-    if s <= 0:
-        s1, f1 = db.mydbbegin(con, cur)
-        print(s1,f1)
 
-        s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
-        s1, f1 = 0, None
+    print("@@@@@@@@@##############$$$$$$$$$$$$$$$$$")
+    print(othapp_res_stat )
+    print(usrmsg)
+    print(insert_or_not )
+    print("@@@@@@@@@##############$$$$$$$$$$$$$$$$$")
 
-    if s <= 0:
-        command = cur.mogrify("""
-                    INSERT INTO ncusr.userlogin (userid, usertype, usercusttype, userstatus, userstatlstupdt, octime, lmtime, entityid, countryid) 
-                    VALUES (%s,%s,%s,%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
-                    """,(userid, usertype, usercusttype, userstatus, entityid, countryid,))
-        print(command)
-        cur, s1, f1 = db.mydbfunc(con,cur,command)
-        s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
-        s1, f1 = 0, None
+    '''
+    if not insert_or_not:
+        usrmsg = usrmsg if usrmsg != "" else "Email id already registered"
+        s, f, t= errhand.get_status(s, 110, f, usrmsg, t, "yes")
+    '''
+    
+    if insert_or_not:
+        if s <= 0:
+            s1, f1 = db.mydbbegin(con, cur)
+            print(s1,f1)
 
-        if s > 0:
-            s, f, t= errhand.get_status(s, 200, f, "SIGNUP update failed", t, "no")
-        print('Insert or update is successful')
+            s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
+            s1, f1 = 0, None
 
-    if s <= 0:
-        command = cur.mogrify("""
-                    INSERT INTO ncusr.userdetails (userid, usercusttype, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, octime, lmtime, entityid, countryid) 
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
-                    """,(userid, usercusttype, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, entityid, countryid,))
-        print(command)
-        cur, s1, f1 = db.mydbfunc(con,cur,command)
-        s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
-        s1, f1 = 0, None
+        if s <= 0:
+            command = cur.mogrify("""
+                        INSERT INTO ncusr.userlogin (userid, usertype, usercusttype, userstatus, userstatlstupdt, octime, lmtime, entityid, countryid) 
+                        VALUES (%s,%s,%s,%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
+                        """,(userid, usertype, usercusttype, userstatus, entityid, countryid,))
+            print(command)
+            cur, s1, f1 = db.mydbfunc(con,cur,command)
+            s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
+            s1, f1 = 0, None
 
-        if s > 0:
-            s, f, t= errhand.get_status(s, 200, f, "SIGNUP update failed", t, "no")
+            if s > 0:
+                s, f, t= errhand.get_status(s, 200, f, "SIGNUP update failed", t, "no")
+            print('Insert or update is successful')
 
-        print('Insert or update is successful')
+        if s <= 0:
+            command = cur.mogrify("""
+                        INSERT INTO ncusr.userdetails (userid, usercusttype, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, octime, lmtime, entityid, countryid) 
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
+                        """,(userid, usercusttype, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, entityid, countryid,))
+            print(command)
+            cur, s1, f1 = db.mydbfunc(con,cur,command)
+            s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
+            s1, f1 = 0, None
 
-    if s <= 0:
-        con.commit()
+            if s > 0:
+                s, f, t= errhand.get_status(s, 200, f, "SIGNUP update failed", t, "no")
+
+            print('Insert or update is successful')
+
+        if s <= 0:
+            con.commit()
+            db.mydbcloseall(con, cur)
 
     if s <= 0:
         pan_payload = {
@@ -871,27 +881,18 @@ def signup_common(sign_data):
             s, f, t = errhand.get_status(s, 0, f, "KYC update failed", t, "no")
     
 
-    
-    db.mydbcloseall(con, cur)
-
-    if s <= 0:
+    if othapp_res_stat == "success" and s <= 0:
         response = {
                 'status': 'success',
                 'error_msg' : ''
             }
         #resps = make_response(jsonify(response), 200)
     else:
-        if otherapp and failed_only_here:
-            response = {
-                'status': 'success',
-                'error_msg' : ''
-            }
-        else:
-            response = {
-                'status': 'fail',
-                'error_msg' : errhand.error_msg_reporting(s, t)
-            }
-        #resps = make_response(jsonify(response), 400)
+        response = {
+            'status': 'fail',
+            'error_msg' : usrmsg
+        }              
+
     print (response)
     print("#########################################################################################################")
     return response
@@ -900,9 +901,6 @@ def signup_common(sign_data):
 
 def allow_regis_user(db_json_rec, pyld, otherapp):
     print("inside allow_regis_user")
-    s = 0
-    f = None
-    t = None #message to front end
     stat = "success"
     usrmsg = None
     insert_rec = False
@@ -988,11 +986,13 @@ def allow_regis_user(db_json_rec, pyld, otherapp):
 def chk_if_value_match(rec, pyld, find = "any", include_usr_val = "yes"):
     all_rec_match = True
     any_rec_match = False
+    usrms = None
+    usrmf = None
 
     if include_usr_val == "yes":
         if rec['userid'] != '':
             if rec['userid'] == pyld["userid"]:
-                usrms = "Userid Already exists for the Email id" if usrm == None else usrm + " | Userid Already exists for the Email id"
+                usrms = "Userid Already exists for the Email id" if usrms == None else usrms + " | Userid Already exists for the Email id"
                 all_rec_match = True if all_rec_match else False
                 any_rec_match = True
             else:
@@ -1050,8 +1050,8 @@ def chk_if_value_match(rec, pyld, find = "any", include_usr_val = "yes"):
             usrmsg = ""
 
 
-    return rec_match, usrmg
-
+    return rec_match, usrmsg
+'''
 def validate_app(rec,pyld):
 
     if rec['sinupemail'] != '':
@@ -1088,7 +1088,7 @@ def validate_app(rec,pyld):
                 stat = "fail"
 
 
-
+'''
 
 
 
