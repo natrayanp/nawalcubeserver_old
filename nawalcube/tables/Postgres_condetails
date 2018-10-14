@@ -7,11 +7,11 @@ sudo systemctl start docker
 
 #to connect to postgres using pgadmin4
 #### first time run ####
-docker run -v pg-data:/home/natrayan/project/AwsProject/databases/postrgreslk -p 5432:5432 --name postgres-test -e POSTGRES_PASSWORD=password123 -d postgres
+docker run -v /media/natrayan/Ubuntudata/project/aws/db/pg11:/var/lib/postgresql/data -p 5432:5432 --name postgres-test -e POSTGRES_PASSWORD=password123 -d --rm postgres:latest
 docker run -v pg-data:/home/natrayan/project/AwsProject/databases/pg10 -p 5433:5432 --name postgres-10 -e POSTGRES_PASSWORD=password123 -d postgres:10.4
 
 #### first time run ####
-docker start postgres-10
+docker start postgres-test
 docker run -v pgadmin4:/home/pgadmin/.pgadmin -p 80:80 --link postgres-test:postgres-test -e 'PGADMIN_DEFAULT_EMAIL=user@domain.com' -e 'PGADMIN_DEFAULT_PASSWORD=SuperSecret' --rm dpage/pgadmin4
 
 docker run -v pgadmin4:/home/pgadmin/.pgadmin -p 8083:80 --name pg10-pgadm --link postgres-test:postgres-test --link postgres-test:postgres-test -e 'PGADMIN_DEFAULT_EMAIL=user@domain.com' -e 'PGADMIN_DEFAULT_PASSWORD=SuperSecret' --rm dpage/pgadmin4
