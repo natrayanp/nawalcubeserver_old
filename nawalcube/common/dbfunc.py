@@ -1,5 +1,5 @@
 from flask import request, make_response, jsonify, Response, redirect
-from nawalcube_server.common import error_logics as errhand
+from nawalcube.common import error_logics as errhand
 
 import psycopg2
 import psycopg2.extras
@@ -12,7 +12,7 @@ ENV = 0
 CON_STR = ["host='localhost' dbname='postgres' user='postgres' password='pass123'",
             "host='ec2-184-72-247-70.compute-1.amazonaws.com' dbname='dcvpcbdidm2qi3' user='gneloudcsniiwt' password='ef1a64d9ff9818e190a8ab931710e7c0b984f2c93b69120f84a42d3d01f06ddf'",
             "",
-            "host='nawalcube_server.c5eo06dso01d.ap-south-1.rds.amazonaws.com' dbname='nawalcube' user='nawalcube' password='Nirudhi1!'"
+            "host='nawalcube.c5eo06dso01d.ap-south-1.rds.amazonaws.com' dbname='nawalcube' user='nawalcube' password='Nirudhi1!'"
           ]
 
 def mydbfunc(con,cur,command):
@@ -55,7 +55,7 @@ def mydbopncon():
     except NameError:
         print("con not defined so assigning as null")
         #conn_string = "host='localhost' dbname='postgres' user='postgres' password='password123'"
-        #conn_string = "host='nawalcube_server.c5eo06dso01d.ap-south-1.rds.amazonaws.com' dbname='nawalcube' user='nawalcube' password='Nirudhi1!'"
+        #conn_string = "host='nawalcube.c5eo06dso01d.ap-south-1.rds.amazonaws.com' dbname='nawalcube' user='nawalcube' password='Nirudhi1!'"
         conn_string = CON_STR[ENV]
         print('after conn string')
         try:
@@ -74,7 +74,7 @@ def mydbopncon():
     else:            
         if con.closed:
             #conn_string = "host='localhost' dbname='postgres' user='postgres' password='password123'"
-            #conn_string = "host='nawalcube_server.c5eo06dso01d.ap-south-1.rds.amazonaws.com' dbname='nawalcube' user='nawalcube' password='Nirudhi1!'"
+            #conn_string = "host='nawalcube.c5eo06dso01d.ap-south-1.rds.amazonaws.com' dbname='nawalcube' user='nawalcube' password='Nirudhi1!'"
             conn_string = CON_STR[ENV]
             try:
                 print('preparing con')
