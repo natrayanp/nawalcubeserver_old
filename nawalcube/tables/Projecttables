@@ -37,7 +37,6 @@ $ pip-review --local --interactive
 
 -- schema for the application
 
-CREATE SCHEMA webapp;
 CREATE SCHEMA ncapp;
 CREATE SCHEMA ncapi;
 CREATE SCHEMA ncamc;
@@ -46,7 +45,7 @@ CREATE SCHEMA ncusr;
 
 ---Login table
 CREATE TABLE ncusr.userlogin (
-    userid 		               varchar(100) NOT NULL,
+    userid 		               varchar(100) NOT NULL PRIMARY KEY,
 	username    		       varchar(100),  --PAN name
     usertype			       varchar(2) NOT NULL, --> (A - Admin, R - Read only, W- Write)
     usercusttype               varchar(10) NOT NULL, --> (A - Admin, I - Investor, D - MFD, A - RIA, T - Trusted app,
@@ -64,7 +63,7 @@ CREATE TABLE ncusr.userlogin (
 
 -- Creation of Admin user
 INSERT INTO ncusr.userlogin (userid,username,usertype,usercusttype,userstatus,kyc_compliant,userstatlstupdt,octime,lmtime,entityid,countryid)
-VALUES ('anczrj1vyLUEpcY8GiH4bglvnCi1','admin','A','A','A','N',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'NAWALCUBE','IN');
+VALUES ('IIshUrOhAbXX1BW6al0sCogabYv1','admin','A','A','A','N',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'NAWALCUBE','IN');
 
 
 -- User registration details
@@ -88,7 +87,7 @@ CREATE TABLE ncusr.userdetails (
 
 -- Creation of Admin user
 INSERT INTO ncusr.userdetails(userid,usercusttype,sinupusername,sinupadhaar,sinuppan,sinuparn,sinupmobile,sinupemail,clientcode,membercode,userkycstatus,octime,lmtime,entityid,countryid)
-VALUES ('anczrj1vyLUEpcY8GiH4bglvnCi1','A','admin user','','','','5656','admin@gmail.com','','','N',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'NAWALCUBE','IN')
+VALUES ('IIshUrOhAbXX1BW6al0sCogabYv1','A','admin user','','','','5656','admin@gmail.com','','','N',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'NAWALCUBE','IN');
 
 -- Login history
 CREATE TABLE ncusr.loginh (
@@ -111,7 +110,7 @@ CREATE TABLE ncusr.loginh (
         
 
 CREATE TABLE ncapp.appdetail (
-    apppk                      integer NOT NULL DEFAULT nextval('ncusr."app_pk_seq"') CONSTRAINT apppkey PRIMARY KEY,
+    apppk                      integer NOT NULL DEFAULT nextval('ncapp."app_pk_seq"') CONSTRAINT apppkey PRIMARY KEY,
     appname                    text, 
     appusertype                text, --(I - Investor, D - MFD, A - RIA, P - Portfolio tool, T - Trusted app )
     redirecturi                text,

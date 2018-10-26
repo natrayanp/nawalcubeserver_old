@@ -50,7 +50,8 @@ def appname():
             response1 = {"errormessage": response["usrmsg"]}
             resps = make_response(jsonify(response1), 403)
 
-        
+        print(resps)
+        print("returning app name")
         return resps
 
 def fn_appname(criteria_json):
