@@ -783,7 +783,7 @@ def ncappfetchfrmtkn():
         daa = request.data
         print("daa", daa)
         print(format(daa))
-        payload = json.loads(daa)
+        payload = json.loads(daa.decode("utf-8"))
         print("payload")
         print(payload)
         print(type(payload))

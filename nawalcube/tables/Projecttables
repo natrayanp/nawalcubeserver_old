@@ -36,11 +36,10 @@ $ pip-review --local --interactive
 
 
 -- schema for the application
-
+CREATE SCHEMA ncusr;
 CREATE SCHEMA ncapp;
 CREATE SCHEMA ncapi;
 CREATE SCHEMA ncamc;
-CREATE SCHEMA ncusr;
 
 
 ---Login table
@@ -91,7 +90,7 @@ VALUES ('IIshUrOhAbXX1BW6al0sCogabYv1','A','admin user','','','','5656','admin@g
 
 -- Login history
 CREATE TABLE ncusr.loginh (
-    userid 		               varchar(100) NOT NULL REFERENCES ncusr.userlogin(userid),
+    userid 		               varchar(100) NOT NULL --REFERENCES ncusr.userlogin(userid),
     ipaddress                  varchar(25),
     sessionid                  varchar(100),
     site                       varchar(100),  --> nc - Nawalcube, dv - developer, au - auth
@@ -123,7 +122,7 @@ CREATE TABLE ncapp.appdetail (
     approved                   varchar(2) NOT NULL, --> Y - Approved, N - Not approved only for Trusted app
     product                    varchar(30) NOT NULL,
     delflg                     varchar(1), --> Y - Deleted, N - Not Deleted
-    appuserid 		           varchar(100) NOT NULL REFERENCES ncusr.userlogin(userid),
+    appuserid 		           varchar(100) NOT NULL, -- REFERENCES ncusr.userlogin(userid),
     octime			           timestamptz NOT NULL,
     lmtime			           timestamptz NOT NULL,
     entityid                   varchar(20) NOT NULL,
