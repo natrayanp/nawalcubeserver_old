@@ -158,7 +158,7 @@ def app_appauth(criteria_json):
             s, f, t= errhand.get_status(s, 100, f, "Unable to locate the app id", t, "yes")            
         else:
             app_db_rec = app_db_rec[0]
-            print("App id identified successfully")
+            print("appauth.py line 161 App id identified successfully")
             pass            
     
     print(s,f)

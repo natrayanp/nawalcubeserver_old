@@ -133,7 +133,7 @@ def fn_appname(criteria_json):
             s, f, t= errhand.get_status(s, 100, f, "Unable to locate the app id", t, "yes")            
         else:
             db_rec = db_rec[0]
-            print("App id identified successfully")
+            print("auth.py line 136 App id identified successfully")
             pass            
     
     print(s,f)        
@@ -178,6 +178,7 @@ def userauth():
         return "inside userauth options"
 
     elif request.method=="POST":
+        print("inside userauth POST")
         payload = request.get_json()
         print(payload)
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -316,7 +317,7 @@ def app_userauth(criteria_json):
             s, f, t= errhand.get_status(s, 100, f, "Unable to locate the app id", t, "yes")            
         else:
             app_db_rec = app_db_rec[0]
-            print("App id identified successfully")
+            print("auth.py line 319 App id identified successfully")
             pass            
     
     print(s,f)

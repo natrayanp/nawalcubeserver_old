@@ -176,6 +176,7 @@ def session_hash(password):
 @bp_auth.route("/loginks")
 @bp_login.route("/dvloginks",methods=["GET","OPTIONS"])
 def loginks():
+    #This is to kill session if already exists
     if request.method=="OPTIONS":
         print("inside loginks options")
         return "inside loginks options"
