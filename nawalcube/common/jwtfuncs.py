@@ -43,7 +43,7 @@ def generatejwt(d):
     t = None #message to front end
     response = None
     res_to_send = 'fail'
-
+    print(d)
     con, cur, s1, f1 = db.mydbopncon()
     s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
     s1, f1 = 0, None
@@ -54,10 +54,10 @@ def generatejwt(d):
     if s <= 0:
         command = cur.mogrify("""
                                 SELECT json_agg(a) FROM (
-                                SELECT secretcode,seccdid FROM secrettkn 
+                                SELECT secretcode,seccdid FROM ncapp.secrettkn 
                                 WHERE entityid = %s AND countryid =%s
                                 ) as a
-                            """,(d["eid"], d["cid"]))
+                            """,(d["ei"], d["ci"]))
         print(command)
 
         cur, s1, f1 = db.mydbfunc(con,cur,command)
@@ -76,7 +76,7 @@ def generatejwt(d):
         db_rec = cur.fetchall()[0][0]
         print(db_rec)
     
-        if len(db_rec) > 0:
+        if len(db_rec) < 1:
             s, f, t= errhand.get_status(s, 100, f, "Unable to get secret", t, "no")            
         else:
             db_rec = db_rec[0]
@@ -93,7 +93,9 @@ def generatejwt(d):
         seccdid = db_rec.get("seccdid", None)
         if seccdid == None:
             s, f, t = errhand.get_status(s, 200, f, "unable to get secret code id", t, "no")
-
+    print("@@@@@@@@@@@@@")
+    print(secretcode)
+    print("@@@@@@@@@@@@@")
     if s <= 0:
         #Call JWT to generate JWT START
         natjwt =  jwt.encode(
@@ -101,10 +103,11 @@ def generatejwt(d):
                               "iss": "ncj",
                               "exp": d["exp"],
                               "iat": datetime.now().strftime('%d%m%Y%H%M%S%f'),                            
-                              "passtkn": d["pass_tkn"],
+                              "passtkn": d["passtkn"],
                               "skd": seccdid,
-                              "eid": d["eid"], 
-                              "cid": d["cid"]
+                              "eid": d["ei"], 
+                              "cid": d["ci"],
+                              "ncuserid": d["ncuserid"]
                             }, 
                             secretcode, 
                             algorithm='HS256')          

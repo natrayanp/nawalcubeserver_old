@@ -4,14 +4,17 @@ from flask import redirect, request,make_response, jsonify
 from nawalcube.common import dbfunc as db
 from nawalcube.common import error_logics as errhand
 from nawalcube.common import jwtfuncs as jwtf
-from datetime import datetime
+from datetime import datetime, timedelta
+from nawalcube.common import configs as config
 import os
 import hashlib
 import hmac
 import binascii
 import jwt
 import requests
-
+import json
+import string
+import random
 
 @bp_appfunc.route("/appauth",methods=["GET","POST","OPTIONS"])
 def appauth():
@@ -32,8 +35,16 @@ def appauth():
         return "inside login options"
 
     elif request.method=="POST":
-        payload = request.get_json()
+        daa = request.data
+        print("daa", daa)
+        print(format(daa))
+        payload = json.loads(daa.decode("utf-8"))
+        print("payload")
         print(payload)
+        print(type(payload))
+
+        #payload = request.get_json()
+        #print(payload)
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
         #userid = jwtf.decodetoken(request, needtkn = False)
@@ -53,15 +64,12 @@ def appauth():
         if res_to_send == "success":
             #response1 = response["result_data"]
             response1 = make_response(jsonify(response["result_data"]), 200)
-            response1.headers['Access-Control-Allow-Origin'] = "*"
-            response1.headers['Access-Control-Allow-Methods'] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
-            response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
             resps = response1
             print("nat")
             print(resps)
         else:
-            response1 = {"errormessage": response["usrmsg"]}
-
+            response1 = make_response(jsonify({"errormessage": response["usrmsg"]}),400)
+            resps = response1
         #resps = make_response(jsonify(response1), 200)
         return resps
 
@@ -72,8 +80,9 @@ def app_appauth(criteria_json):
     t = None #message to front end
     response = None
     res_to_send = 'fail'
-    payload = criteria_json.get("payload",None)
-    
+    payload1 = criteria_json.get("payload",None)
+    print(criteria_json)
+    print(payload1)
     print(s)
     if s <= 0:
         if criteria_json.get("entityid", None) != None:
@@ -81,36 +90,39 @@ def app_appauth(criteria_json):
         else:
             entityid = None
             s, f, t= errhand.get_status(s, 100, f, "entity id not provided", t, "yes")
-
+        
         if criteria_json.get("cntryid", None) != None:
             cntryid = criteria_json['cntryid']
         else:
             cntryid = None
             s, f, t= errhand.get_status(s, 100, f, "cntry code is not provided", t, "yes")       
         
-        if payload == None:
+        entityid = config.INSTALLDATA[config.LIVE]["entityid"]
+        cntryid = config.INSTALLDATA[config.LIVE]["countryid"]
+
+        if payload1 == None:
             s, f, t= errhand.get_status(s, 100, f, "App data not sent.  Please try again", t, "yes")
         else:
-            if payload.get("userauthtkn", None) != None:
-                userauthtkn = criteria_json['userauthtkn']
+            if payload1.get("userauthtkn", None) != None:
+                userauthtkn = payload1['userauthtkn']
             else:
                 userauthtkn = None
                 s, f, t= errhand.get_status(s, 100, f, "User login success authtkn not provided", t, "yes")
 
-            if payload.get("appid", None) != None:
-                appid = criteria_json['appid']
+            if payload1.get("appid", None) != None:
+                appid = payload1['appid']
             else:
                 appid = None
                 s, f, t= errhand.get_status(s, 100, f, "app id not provided", t, "yes")
 
-            if payload.get("appkey", None) != None:
-                appkey = criteria_json['appkey']
+            if payload1.get("appkey", None) != None:
+                appkey = payload1['appkey']
             else:
                 appkey = None
                 s, f, t= errhand.get_status(s, 100, f, "appkey is not provided", t, "yes")
 
-            if payload.get("redirecturi", None) != None:
-                redirecturi = criteria_json['redirecturi']
+            if payload1.get("redirecturi", None) != None:
+                redirecturi = payload1['redirecturi']
             else:
                 redirecturi = None
                 s, f, t= errhand.get_status(s, 100, f, "redirecturi is not provided", t, "yes")
@@ -131,7 +143,7 @@ def app_appauth(criteria_json):
         command = cur.mogrify("""
                                 SELECT json_agg(a) FROM (
                                 SELECT *
-                                FROM ncusr.appdetail
+                                FROM ncapp.appdetail
                                 WHERE delflg != 'Y' AND expirydate >= CURRENT_DATE
                                 AND appid = %s AND appkey = %s AND redirecturi = %s
                                 AND entityid = %s AND countryid = %s
@@ -152,18 +164,20 @@ def app_appauth(criteria_json):
     app_db_rec = None
     if s <= 0:
         app_db_rec = cur.fetchall()[0][0]
+        print("get db details")
         print(app_db_rec)
     
-        if len(app_db_rec) > 0:
+        if len(app_db_rec) < 1:
             s, f, t= errhand.get_status(s, 100, f, "Unable to locate the app id", t, "yes")            
         else:
             app_db_rec = app_db_rec[0]
             print("appauth.py line 161 App id identified successfully")
-            pass            
+            print(app_db_rec)            
     
     print(s,f)
     appuserid = app_db_rec.get("appuserid", None)
     
+    '''
     if app_db_rec["appusertype"] == "D":
         useridts = appuserid
     elif app_db_rec["appusertype"] == "A":
@@ -174,7 +188,7 @@ def app_appauth(criteria_json):
         useridts = appuserid
     elif app_db_rec["appusertype"] == "T":
         useridts = appuserid
-
+    '''
 
 
     if s <= 0:
@@ -183,10 +197,10 @@ def app_appauth(criteria_json):
                             SELECT *
                             FROM ncusr.userauth
                             WHERE tknexpiry >= CURRENT_TIMESTAMP
-                            AND userid = %s AND userauthtkn = %s AND appid = %s
+                            AND userauthtkn = %s AND appid = %s
                             AND entityid = %s AND countryid = %s
                             ) as a
-                        """,(useridts, userauthtkn, appid, entityid, cntryid,) )
+                        """,(userauthtkn, appid, entityid, cntryid,) )
         print(command)
         cur, s1, f1 = db.mydbfunc(con,cur,command)
         s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
@@ -204,13 +218,12 @@ def app_appauth(criteria_json):
         usr_db_rec = cur.fetchall()[0][0]
         print(usr_db_rec)
     
-        if len(usr_db_rec) > 0:
+        if len(usr_db_rec) < 1:
             s, f, t= errhand.get_status(s, 100, f, "Unable to locate the user auth details OR Token expired", t, "yes")            
         else:
             usr_db_rec = usr_db_rec[0]
-            print("User auth token validated successfully")
-            pass            
-    
+            print("User auth token validated successfully")          
+            useridts = usr_db_rec["userid"]
     #We are ready to generate API pass token
     print(s,f)
     i = 0
@@ -224,8 +237,8 @@ def app_appauth(criteria_json):
 
         command = cur.mogrify("""
                                 SELECT count(1)
-                                FROM ncusr.appdetail
-                                WHERE pass_tkn = %s
+                                FROM ncapp.appusrauth
+                                WHERE passwordtkn = %s
                             """,(pass_tkn,) )
         print(command)
         cur, s1, f1 = db.mydbfunc(con,cur,command)
@@ -273,10 +286,14 @@ def app_appauth(criteria_json):
             passexpiry = get_expiry_time(appusrtype)
 
             command = cur.mogrify("""
-                        UPDATE ncusr.appdetail SET passwordtkn = %s, passwordtknexpiry = %(timestamp)s, lmtime = CURRENT_TIMESTAMP
-                        WHERE  appid =%s AND userid = %s AND entityid = %s AND countryid = %s;
-                        """,(pass_tkn, {'timestamp': passexpiry.datetime.strptime(t,'%d-%m-%YT%H:%M:%S')}, appid, userid, entityid, cntryid,))
+            INSERT into ncapp.appusrauth (userauthtkn,appid,passwordtkn,passwordtknexpiry,entityid,countryid,octime,lmtime)
+            VALUES(%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT ON CONSTRAINT unq_comb_auauth
+            DO
+                UPDATE SET passwordtkn = %s, passwordtknexpiry = %s, lmtime = CURRENT_TIMESTAMP 
+            """,(userauthtkn, appid, pass_tkn, passexpiry, entityid, cntryid, pass_tkn, passexpiry,))
             print(command)
+
 
             cur, s1, f1 = db.mydbfunc(con,cur,command)
             s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
@@ -292,10 +309,11 @@ def app_appauth(criteria_json):
     
     if s <= 0:
         data_for_jwt = { 
-                            "exp": passexpiry.datetime.strftime('%d%m%Y%H%M%S'),
+                            "exp": passexpiry.strftime('%d%m%Y%H%M%S'),
                             "passtkn": pass_tkn,
                             "ei" : entityid, 
-                            "ci" : cntryid
+                            "ci" : cntryid,
+                            "ncuserid" : useridts
                         }
         natjwt = jwtf.generatejwt(data_for_jwt)
         
@@ -315,8 +333,9 @@ def app_appauth(criteria_json):
                     'result_data' : result_date,
                     'status': res_to_send,
                     'status_code': 0,
-                    'usrmsg': "Token generation successful"
+                    'usrmsg': "pass Token generation successful"
         }
+
 
     print(res_to_send, response)
     
@@ -344,16 +363,16 @@ def get_expiry_time(ut) -> datetime:
     ct = datetime.now().strftime('%Y%m%d%H%M%S')
 
     if ut == 'I':
-        et = datetime.datetime.now() + datetime.timedelta(hours=1)
+        et = datetime.now() + timedelta(hours=1)
     elif ut == 'D':
-        et = datetime.datetime.now() + datetime.timedelta(hours=1)
+        et = datetime.now() + timedelta(hours=1)
     elif ut == 'A':
-        et = datetime.datetime.now() + datetime.timedelta(hours=1)
+        et = datetime.now() + timedelta(hours=1)
     elif ut == 'P':
-        et = datetime.datetime.now() + datetime.timedelta(hours=1)
+        et = datetime.now() + timedelta(hours=1)
     elif ut == 'T':
-        reference_time = datetime.datetime.now()
-        et = reference_time.replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1,microseconds=-1)       
+        reference_time = datetime.now()
+        et = reference_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1,microseconds=-1)       
         #Example et value 2018-09-04 23:59:59.999999
     return et
 

@@ -885,7 +885,7 @@ def fetch_app_data_only_wth_tkn(criteria_json):
             s, f, t= errhand.get_status(s, 100, f, "User auth token is not valid", t, "yes")            
         else:
             usr_db_rec = usr_db_rec[0]
-            print("App token verified successfully")
+            print("Userauth token verified successfully")
             pass            
     
     print(s,f)
