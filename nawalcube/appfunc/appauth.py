@@ -86,17 +86,20 @@ def app_appauth(criteria_json):
     print(s)
     if s <= 0:
         if criteria_json.get("entityid", None) != None:
-            entityid = criteria_json['entityid']
+            origin_entityid = criteria_json['entityid']
         else:
-            entityid = None
-            s, f, t= errhand.get_status(s, 100, f, "entity id not provided", t, "yes")
+            origin_entityid = None
+            s, f, t= errhand.get_status(s, 100, f, "Origin entity id not provided", t, "yes")
         
         if criteria_json.get("cntryid", None) != None:
-            cntryid = criteria_json['cntryid']
+            origin_cntryid = criteria_json['cntryid']
         else:
-            cntryid = None
-            s, f, t= errhand.get_status(s, 100, f, "cntry code is not provided", t, "yes")       
+            origin_cntryid = None
+            s, f, t= errhand.get_status(s, 100, f, "Origin cntry code is not provided", t, "yes")  
+
+        print('origin', origin_entityid, origin_cntryid)
         
+        #Use the installed entity and country code for further operatios
         entityid = config.INSTALLDATA[config.LIVE]["entityid"]
         cntryid = config.INSTALLDATA[config.LIVE]["countryid"]
 
