@@ -75,8 +75,8 @@ CREATE TABLE ncusr.userdetails (
     sinuparn                   varchar(10),
     sinupmobile                varchar(15) NOT NULL,
     sinupemail                 varchar(100) NOT NULL,
-    clientcode                 Varchar(10 REFERENCES ncusr.uccclientmaster(clientcode),
-    membercode                 varchar(20) REFERENCES ncusr.fatcamaster(membercode),
+    clientcode                 Varchar(10),-- REFERENCES ncusr.uccclientmaster(clientcode),
+    membercode                 varchar(20),-- REFERENCES ncusr.fatcamaster(membercode),
     userkycstatus              varchar(1) NOT NULL DEFAULT 'N',
     octime			           timestamptz NOT NULL,
     lmtime			           timestamptz NOT NULL,
@@ -193,7 +193,7 @@ create table webapp.BANKIFSCMASTER
     
 );
 
-\copy mytable [ ( column_list ) ] FROM '/path/to/csv/file' WITH CSV HEADER
+--\copy mytable [ ( column_list ) ] FROM '/path/to/csv/file' WITH CSV HEADER
     
 
     ---Login user details
@@ -206,7 +206,7 @@ CREATE TABLE webapp.userlogin (
     lgsinupmobile              varchar(15) NOT NULL,
     lgsinupemail               varchar(100) NOT NULL,
     lgclientcode               text,
-    lgmembercode               text;
+    lgmembercode               text,
     lgusertype			       varchar(2) NOT NULL, --> (R - Read only, W- Write)
     lguserstatus		       varchar(2) NOT NULL, --> (S-Signup complted, Y - KYC NON COMPLIANT, R-Registration in progress, U-Registration done image upload pending,
                                                     --> P - Registration and upload done waiting to be active, A- Active, B-Blocked , I-Deleteduser)
@@ -242,10 +242,10 @@ create table webapp.notifimaster(
     nfmoctime			timestamp NOT NULL,
 	nfmlmtime			timestamp NOT NULL,
 	nfmentityid          varchar(10) NOT NULL
-)
+);
 
 ALTER TABLE webapp.notifimaster
-ADD CONSTRAINT notimastuniq UNIQUE (nfname, nfmuserid, nfmentityid)
+ADD CONSTRAINT notimastuniq UNIQUE (nfname, nfmuserid, nfmentityid);
 
 --Notification for loged in users table
 
@@ -280,7 +280,7 @@ create table webapp.notifiuser(
             increment 1
             MAXVALUE 999999999;
             
-create table webapp.uccclientmaster(
+create table ncusr.uccclientmaster(
 ucclguserid       varchar(100) NOT NULL CONSTRAINT uccuserid PRIMARY KEY, 
 clientcode      Varchar(10),
 clientholding      Varchar(2) ,
@@ -434,7 +434,7 @@ ubo_fr_nam     varchar(50) ,
 ubo_occ     varchar(2) ,
 ubo_occ_ty     varchar(2) ,
 ubo_tel     varchar(12) ,
-ubo_mobile     varchar(12) ,                                                                           time
+ubo_mobile     varchar(12) ,                                                                           
 ubo_code     varchar(3) ,
 ubo_hol_pc     varchar(3) ,
 sdf_flag     varchar(2) ,
@@ -446,7 +446,7 @@ filler1     varchar(30) ,
 filler2     varchar(30) ,
 fatcaoctime   timestamp NOT NULL,
 fatcalmtime   timestamp NOT NULL,
-fatcaentityid            varchar(10) NOT NULL,
+fatcaentityid            varchar(10) NOT NULL
 );
 
 
@@ -465,7 +465,7 @@ fupllmtime                  timestamptz NOT NULL,
 fuplentityid                varchar(10) NOT NULL
 );
 
-amcmaster table
+--amcmaster table
     ---- fndnatcode sequence number
         CREATE SEQUENCE webapp.amc_code_seq 
             START 1
@@ -480,12 +480,12 @@ amcnamefrmbse               text NOT NULL,
 amcactivflg                 boolean NOT NULL,
 amcnotactivefrom            timestamptz,
 amcloctime                  timestamptz NOT NULL,
-amcllmtime                  timestamptz NOT NULL
+amcllmtime                  timestamptz NOT NULL,
 entityid                    varchar(10) NOT NULL
 );
 
 
-Fundmaster table
+--Fundmaster table
     ---- fndnatcode sequence number
         CREATE SEQUENCE webapp.fund_code_seq 
             START 1
@@ -626,16 +626,6 @@ entityid                    varchar(10) NOT NULL
 
 
 
-INSERT INTO notifimaster VALUES ('id1','MiqAlrt18sWZ9M3hV8qpdySez2I3','dashboard','User Registration not complete.  Please complete user registration to start transacting','I','Y','','linkbutton','/mfreg',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'IN');
-
-  889  source natvenv/bin/activate
-  890  gunicorn --reload natrayan:app
-
-    drop table pfstklist;
-    drop table pfmflist;
-    drop table pfmaindetail;
-
-
 CREATE TABLE webapp.pfmaindetail (
     pfportfolioid 		varchar(50) CONSTRAINT porfolioid PRIMARY KEY, --> use userid+running number
     pfpfidusrrunno       integer CONSTRAINT positive_price CHECK (pfpfidusrrunno > 0),
@@ -710,7 +700,7 @@ CREATE TABLE webapp.pfmaindetail (
     entityid                    varchar(10) NOT NULL
     );
     
-    Addition of one foield to catpure transactioncode+buysell (mfnewpurchse or mfnewredemption,etc..) is needed.
+    --Addition of one foield to catpure transactioncode+buysell (mfnewpurchse or mfnewredemption,etc..) is needed.
     
     
     ------ create a sequence (this is to be reset at 00:00 hrs every day, Lambda function to be written for reset)
@@ -812,11 +802,11 @@ CREATE TABLE webapp.pfmaindetail (
     
     
     
-    webapp.mfmandateutildet(
+    CREATE TABLE webapp.mfmandateutildet(
     manu_internalid              varchar(25) NOT NULL REFERENCES webapp.mfmandatdetails(man_internalid), 
     manu_date                   numeric(2) NOT NULL,
     manu_utilamt                numeric(19,2) NOT NULL,
-    manu_refrences              text
+    manu_refrences              text,
     manu_octime		            timestamptz NOT NULL,
     manu_lmtime             	    timestamptz NOT NULL,
     manu_entityid                varchar(10) NOT NULL
@@ -990,6 +980,20 @@ CREATE TABLE webapp.pfmaindetail (
 	
 	
 	
+    
+
+
+
+
+INSERT INTO notifimaster VALUES ('id1','MiqAlrt18sWZ9M3hV8qpdySez2I3','dashboard','User Registration not complete.  Please complete user registration to start transacting','I','Y','','linkbutton','/mfreg',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'IN');
+
+  889  source natvenv/bin/activate
+  890  gunicorn --reload natrayan:app
+
+    drop table pfstklist;
+    drop table pfmflist;
+    drop table pfmaindetail;
+
 
     
     SELECT clientcode FROM webapp.uccclientmaster WHERE ucclguserid = %s AND uccentityid = %s,(userid,entityid,)

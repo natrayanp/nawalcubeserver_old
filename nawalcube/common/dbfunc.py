@@ -4,7 +4,7 @@ from nawalcube.common import error_logics as errhand
 import psycopg2
 import psycopg2.extras
 
-ENV = 0
+ENV = 3
 # 0 - DEV
 # 1- HEROKU
 # 2 - UAT

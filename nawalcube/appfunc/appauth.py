@@ -20,7 +20,8 @@ import random
 def appauth():
     # This function is called to authenticate app
     # Input --> 2
-    #       1) in payload authtoken, apiid , apikey & redirecturi are mandatory
+    #       1) in payload authtoken, apiid , apikey & redirecturi are man
+    # datory
     #       2) in header countryid and entityid
     # Output --> 2
     #       1) success : jwt will be sent {'passtkn': password token} 

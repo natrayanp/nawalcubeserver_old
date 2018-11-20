@@ -558,8 +558,54 @@ def app_detail_fetch(criteria_json):
     return (res_to_send, response)
 
 
-#http://localhost:8080/appsignup?type=signup&appid=12323235565656&home=http://localhost:4200
+@bp_appfunc.route("/ncappauth",methods=["GET","POST","OPTIONS"])
+def ncappsignup():
+    if request.method=="OPTIONS":
+        print("inside ncappsignup options")
+        return "inside ncappsignup options"
 
+    elif request.method=="GET":
+        print("inside ncappsignup post")
+        payload = request.args
+        #payload = request.get_json()
+        print("payload",payload)
+        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    
+        criteria_json = {
+            "userid"   : None,
+            "entityid" : 'NAWALCUBE',
+            "cntryid"  : 'IN',
+            "payload" : payload
+        }
+        res_to_send, appname = other_app_register(criteria_json)
+        # success -->  {"appname": app_details["appname"]}
+        # failure -->  {"usrmsg": usrmsg}
+        print(res_to_send, appname)
+        if res_to_send == 'success':
+            print(config.SIGNUPURL[config.LIVE])
+            print(payload["appid"])
+            print(appname["appname"])
+            print(payload["home"])
+            print(payload["type"])
+            if payload["type"] == "signup":
+                return redirect(config.SIGNUPURL[config.LIVE]+"?type=signup&appid="+payload["appid"]+"&appname="+appname["appname"]+"&home="+payload["home"], code=302)
+            elif payload["type"] == "code":
+                return redirect(config.SIGNUPURL[config.LIVE]+"?type=code&appid="+payload["appid"]+"&redirecturi="+appname["redirecturi"], code=302)            
+            # resps = make_response(jsonify(response), 200)
+            # resps = make_response(jsonify(response), 200 if res_to_send == 'success' else 400)
+        else:
+            print(appname["usrmsg"])
+            return redirect(payload["redirecturi"]+"?type="+payload["type"]+"&regdata=401&msg="+appname["usrmsg"], code=302)
+
+
+
+
+
+
+
+
+#http://localhost:8080/appsignup?type=signup&appid=12323235565656&home=http://localhost:4200
 @bp_appfunc.route("/ncappsignup",methods=["GET","POST","OPTIONS"])
 def ncappsignup():
     if request.method=="OPTIONS":
