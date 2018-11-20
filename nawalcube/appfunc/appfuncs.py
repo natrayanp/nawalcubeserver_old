@@ -10,6 +10,8 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import auth
+from urllib.parse import unquote
+from flask import json
 
 from nawalcube.common import configs as config
 import os
@@ -559,18 +561,19 @@ def app_detail_fetch(criteria_json):
 
 
 @bp_appfunc.route("/ncappauth",methods=["GET","POST","OPTIONS"])
-def ncappsignup():
+def ncappauth():
     if request.method=="OPTIONS":
-        print("inside ncappsignup options")
-        return "inside ncappsignup options"
+        print("inside ncappauth options")
+        return "inside ncappauth options"
 
     elif request.method=="GET":
-        print("inside ncappsignup post")
+        print("inside ncappauth post")
         payload = request.args
+        payload = payload.to_dict()
         #payload = request.get_json()
         print("payload",payload)
+        #print("payload to dictt",payload.to_dict())
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-
     
         criteria_json = {
             "userid"   : None,
@@ -582,20 +585,26 @@ def ncappsignup():
         # success -->  {"appname": app_details["appname"]}
         # failure -->  {"usrmsg": usrmsg}
         print(res_to_send, appname)
+        print(payload)
+        print("@@@@@@@@@@@@@@@@@@@2")
         if res_to_send == 'success':
             print(config.SIGNUPURL[config.LIVE])
             print(payload["appid"])
             print(appname["appname"])
             print(payload["home"])
-            print(payload["type"])
+            print(payload["request"])
             if payload["type"] == "signup":
                 return redirect(config.SIGNUPURL[config.LIVE]+"?type=signup&appid="+payload["appid"]+"&appname="+appname["appname"]+"&home="+payload["home"], code=302)
             elif payload["type"] == "code":
+                print('inside code')
+                print(config.SIGNUPURL[config.LIVE]+"?type=code&appid="+payload["appid"]+"&redirecturi="+appname["redirecturi"])
                 return redirect(config.SIGNUPURL[config.LIVE]+"?type=code&appid="+payload["appid"]+"&redirecturi="+appname["redirecturi"], code=302)            
             # resps = make_response(jsonify(response), 200)
             # resps = make_response(jsonify(response), 200 if res_to_send == 'success' else 400)
         else:
+            print("inside exit")
             print(appname["usrmsg"])
+            print(payload["redirecturi"]+"?type="+payload["type"]+"&regdata=401&msg="+appname["usrmsg"])
             return redirect(payload["redirecturi"]+"?type="+payload["type"]+"&regdata=401&msg="+appname["usrmsg"], code=302)
 
 
@@ -619,7 +628,8 @@ def ncappsignup():
         print("payload",payload)
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-    
+
+
         criteria_json = {
             "userid"   : None,
             "entityid" : 'NAWALCUBE',
@@ -649,8 +659,13 @@ def other_app_register(criteria_json):
     t = None #message to front end
     ret_resp_data = None
     res_to_send = 'fail'
+    print('bf')
+    print(criteria_json)
     parameters = criteria_json.get("payload",None)
-    print(parameters['type'])
+    print(parameters)
+    print('sdsds')
+    #print(parameters['type'])
+    print('sdsds')
     payload = {
         'appid':  parameters['appid'],
         'login':  'nologin'
