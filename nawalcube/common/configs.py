@@ -1,12 +1,16 @@
 # LIVE = 0
 # UAT = 1
-LIVE = 1
+LIVE = 0
 
 SIGNUPURL = ["https://nawalcube.com/login/signup","http://localhost:4200/login/signup"]
 LOGINURL = ["https://nawalcube.com/authorise/auth","http://localhost:4200/authorise/auth"]
 PANVALURL = ["","http://localhost:8082/panvali"]
 
-INSTALLDATA = [{},
+INSTALLDATA = [
+    {
+    "entityid": "NAWALCUBE",
+    "countryid": "IN"
+},
 {
     "entityid": "NAWALCUBE",
     "countryid": "IN"

@@ -74,11 +74,12 @@ def generatejwt(d):
     db_rec = None
     if s <= 0:
         db_rec = cur.fetchall()[0][0]
-        print(db_rec)
+        
     
         if len(db_rec) < 1:
             s, f, t= errhand.get_status(s, 100, f, "Unable to get secret", t, "no")            
         else:
+            print(db_rec)
             db_rec = db_rec[0]
             print("got the secret string successfully")
             pass            

@@ -591,14 +591,13 @@ def ncappauth():
             print(config.SIGNUPURL[config.LIVE])
             print(payload["appid"])
             print(appname["appname"])
-            print(payload["home"])
-            print(payload["request"])
+            print(payload["type"])
             if payload["type"] == "signup":
                 return redirect(config.SIGNUPURL[config.LIVE]+"?type=signup&appid="+payload["appid"]+"&appname="+appname["appname"]+"&home="+payload["home"], code=302)
             elif payload["type"] == "code":
                 print('inside code')
-                print(config.SIGNUPURL[config.LIVE]+"?type=code&appid="+payload["appid"]+"&redirecturi="+appname["redirecturi"])
-                return redirect(config.SIGNUPURL[config.LIVE]+"?type=code&appid="+payload["appid"]+"&redirecturi="+appname["redirecturi"], code=302)            
+                print(config.LOGINURL[config.LIVE]+"?type=code&appid="+payload["appid"]+"&redirecturi="+payload["redirecturi"])
+                return redirect(config.LOGINURL[config.LIVE]+"?type=code&appid="+payload["appid"]+"&redirecturi="+payload["redirecturi"], code=302)            
             # resps = make_response(jsonify(response), 200)
             # resps = make_response(jsonify(response), 200 if res_to_send == 'success' else 400)
         else:
@@ -832,7 +831,28 @@ def ncappsingupres():
 
 @bp_appfunc.route("/ncappfetchfrmtkn",methods=["GET","POST","OPTIONS"])
 def ncappfetchfrmtkn():
-    #Fetch the singup data
+    # Description : Fetch the singup data
+    # Functional use :
+    # Called from : callbackurifun.py->ncappfetchfrmtkn
+    # Request data:
+    # headers = {"entityid": entityid, "countryid": countryid}
+    # req_payload = #{"userauthtkn": callback_data["regdata"], "appid": settings.NCAPPID,"appkey":settings.NCAPPKEY}
+    # Response from this endpoint:
+    #     Field Name         success                     fail
+    # -----------------------------------------------------------
+    #  {  
+    #    "userauthtkn":  new_userauthtkn,                BLANK
+    #     "tknexpiry":   usr_db_rec["tknexpiry"],        BLANK
+    #     "userid":      more_usr_db_rec["userid"],      BLANK
+    #     "username":    more_usr_db_rec["username"],    BLANK
+    #     "emailid":     more_usr_db_rec["sinupemail"],  BLANK
+    #     "status":      success                         fail
+    #     "msg":         BLANK                           fail message
+    #   }
+    # called functions: 1
+    # 1) fetch_app_data_only_wth_tkn(criteria_json)
+
+
     if request.method=="OPTIONS":
         print("inside ncappfetchfrmtkn options")        
         response1 = make_response(jsonify("inside ncappfetchfrmtkn options"),200)
@@ -845,6 +865,9 @@ def ncappfetchfrmtkn():
         print("daa", daa)
         print(format(daa))
         payload = json.loads(daa.decode("utf-8"))
+        #Payload
+        #{"userauthtkn": callback_data["regdata"], "appid": settings.NCAPPID,"appkey":settings.NCAPPKEY}
+
         print("payload")
         print(payload)
         print(type(payload))
@@ -858,6 +881,18 @@ def ncappfetchfrmtkn():
         }
         res_status, res_data = fetch_app_data_only_wth_tkn(criteria_json)
         print(res_data)
+        #res_data 
+        #    Field Name         success                     fail
+        #-----------------------------------------------------------
+        # {  
+        #   "userauthtkn":  new_userauthtkn,                BLANK
+        #    "tknexpiry":   usr_db_rec["tknexpiry"],        BLANK
+        #    "userid":      more_usr_db_rec["userid"],      BLANK
+        #    "username":    more_usr_db_rec["username"],    BLANK
+        #    "emailid":     more_usr_db_rec["sinupemail"],  BLANK
+        #    "status":      success                         fail
+        #    "msg":         BLANK                           fail message
+        #  }
 
         if res_status == "success":
             response1 = make_response(jsonify(res_data),200)
@@ -868,17 +903,40 @@ def ncappfetchfrmtkn():
 
 
 def fetch_app_data_only_wth_tkn(criteria_json):
-# payload = {"userauthtkn": , "appid": ,"appkey":}
-# entity id and country id will come in header which are mandator.
-# Output = {"userauthtkn": "","userid": "","emailid": "","status": success/fail}
+    # Description : Fetch app data
+    # Functional use :
+    # Called from : appfuncs.py->ncappfetchfrmtkn
+    # Request data <criteria_json>:
+    # criteria_json = {"entityid": entityid, "countryid": countryid, "payload": <as per below>}
+    #         payload = {"userauthtkn": callback_data["regdata"], "appid": settings.NCAPPID,"appkey":settings.NCAPPKEY}
+    # Response from this endpoint:
+    #     Field Name         success                     fail
+    # -----------------------------------------------------------
+    #  {  
+    #    "userauthtkn":  new_userauthtkn,                BLANK
+    #     "tknexpiry":   usr_db_rec["tknexpiry"],        BLANK
+    #     "userid":      more_usr_db_rec["userid"],      BLANK
+    #     "username":    more_usr_db_rec["username"],    BLANK
+    #     "emailid":     more_usr_db_rec["sinupemail"],  BLANK
+    #     "status":      success                         fail
+    #     "msg":         BLANK                           fail message
+    #   }
+    # called functions: None
+
         
     print("inside fetch_app_data_only_wth_tkn function")
     s = 0
-    f = None
-    t = None #message to front end
-    print(criteria_json)
-    payload = criteria_json.get("payload",None)
-    print(payload)
+
+    f = 
+    None
+    t = N
+    one #message to front end
+    print
+    (criteria_json)
+    paylo
+    ad = criteria_json.get("payload",None)
+    print
+    (payload)
 
     if payload == None:
         appid = None
@@ -1070,7 +1128,8 @@ def fetch_app_data_only_wth_tkn(criteria_json):
             "userid": more_usr_db_rec["userid"],
             "username": more_usr_db_rec["username"],
             "emailid": more_usr_db_rec["sinupemail"],
-            "status": res_status
+            "status": res_status,
+            "msg":""
         }
     else:
         res_status = "fail"
@@ -1079,7 +1138,8 @@ def fetch_app_data_only_wth_tkn(criteria_json):
             "userid": "",
             "username": "",
             "emailid": "",
-            "status": res_status
+            "status": res_status,
+            "msg": t
         }
     print("rached end")
     return res_status, user_auth_detais
