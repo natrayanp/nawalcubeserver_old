@@ -926,17 +926,11 @@ def fetch_app_data_only_wth_tkn(criteria_json):
         
     print("inside fetch_app_data_only_wth_tkn function")
     s = 0
-
-    f = 
-    None
-    t = N
-    one #message to front end
-    print
-    (criteria_json)
-    paylo
-    ad = criteria_json.get("payload",None)
-    print
-    (payload)
+    f = None
+    t = None #message to front end
+    print(criteria_json)
+    payload = criteria_json.get("payload",None)
+    print(payload)
 
     if payload == None:
         appid = None
