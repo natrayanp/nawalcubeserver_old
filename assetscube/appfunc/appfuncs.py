@@ -1,11 +1,11 @@
 from . import bp_appfunc
 from flask import redirect,request,make_response, jsonify
 #from flask_cors import CORS, cross_origin
-from nawalcube.common import dbfunc as db
-from nawalcube.common import error_logics as errhand
-from nawalcube.common import jwtfuncs as jwtf
-from nawalcube.common import serviceAccountKey as sak
-from nawalcube.authentication import auth as myauth
+from assetscube.common import dbfunc as db
+from assetscube.common import error_logics as errhand
+from assetscube.common import jwtfuncs as jwtf
+from assetscube.common import serviceAccountKey as sak
+from assetscube.authentication import auth as myauth
 from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials
@@ -13,7 +13,7 @@ from firebase_admin import auth
 from urllib.parse import unquote
 from flask import json
 
-from nawalcube.common import configs as config
+from assetscube.common import configs as config
 import os
 import hashlib
 import hmac

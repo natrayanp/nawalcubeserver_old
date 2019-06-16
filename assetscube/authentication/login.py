@@ -1,11 +1,11 @@
 from . import bp_auth, bp_login
 from flask import redirect, request,make_response, jsonify
 #from flask_cors import CORS, cross_origin
-from nawalcube.common import dbfunc as db
-from nawalcube.common import error_logics as errhand
-from nawalcube.common import jwtfuncs as jwtf
-from nawalcube.common import serviceAccountKey as sak
-from nawalcube.common import configs as configs
+from assetscube.common import dbfunc as db
+from assetscube.common import error_logics as errhand
+from assetscube.common import jwtfuncs as jwtf
+from assetscube.common import serviceAccountKey as sak
+from assetscube.common import configs as configs
 from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials
@@ -14,6 +14,28 @@ import os
 import hashlib
 import json
 import requests
+import time
+
+
+@bp_auth.route("/tstnatlogin")
+@bp_login.route("/tstnatlogin",methods=["GET","OPTIONS"])
+def tstnatlogin():
+    if request.method=="OPTIONS":
+        print("inside tstlogin options")
+        return "inside tstlogin options"
+
+    elif request.method=="GET":
+        #res_to_send, response = login_common(request, 'nc')
+        time.sleep(5)
+        res_to_send = 'success'
+        if res_to_send == 'success':
+            resps = make_response(jsonify({'nat': 'success'}), 200)    
+            #resps = make_response(jsonify(response), 200 if res_to_send == 'success' else 400)
+        else:
+            #resps = make_response(jsonify(response), 400)
+            print("end")
+    print("end")
+    return resps
 
 
 @bp_auth.route("/login")
@@ -26,12 +48,12 @@ def login():
     elif request.method=="GET":
         res_to_send, response = login_common(request, 'nc')
 
-        if res_to_send == 'success':
+        if res_to_send == 'success' or 'fail':
             resps = make_response(jsonify(response), 200)    
             #resps = make_response(jsonify(response), 200 if res_to_send == 'success' else 400)
         else:
             resps = make_response(jsonify(response), 400)
-        
+        #dfdfdf
         return resps
 
 @bp_login.route("/dvlogin",methods=["GET","OPTIONS"])
@@ -118,7 +140,7 @@ def login_common(request, site):
                 'sessionid' : sh,
                 'status': res_to_send,
                 'status_code': s,
-                'usrmsg': errhand.error_msg_reporting(s, t)
+                'message': errhand.error_msg_reporting(s, t)
                 }
 
         else:
@@ -148,7 +170,7 @@ def login_common(request, site):
                     'sessionid' : '',
                     'status': res_to_send,
                     'status_code': s,
-                    'usrmsg': errhand.error_msg_reporting(s, t)
+                    'message': errhand.error_msg_reporting(s, t)
                     }
             else:
                 res_to_send = 'success'
@@ -157,7 +179,7 @@ def login_common(request, site):
                             'sessionid' : sh,
                             'status': res_to_send,
                             'status_code': 0,
-                            'usrmsg': ''
+                            'message': ''
                 }
 
     con.commit()
@@ -289,7 +311,7 @@ def loginsk_common(request, site):
             'sessionid' : '',
             'status': res_to_send,
             'status_code': s,
-            'usrmsg': errhand.error_msg_reporting(s, t)
+            'message': errhand.error_msg_reporting(s, t)
             }
     else:
         res_to_send = 'success'
@@ -298,7 +320,7 @@ def loginsk_common(request, site):
                     'sessionid' : sh,
                     'status': res_to_send,
                     'status_code': 0,
-                    'usrmsg': ''
+                    'message': ''
         }
 
     con.commit()
@@ -409,7 +431,7 @@ def logout_common(request, site):
             'sessionid' : '',
             'status': res_to_send,
             'status_code': s,
-            'usrmsg': errhand.error_msg_reporting(s, t)
+            'message': errhand.error_msg_reporting(s, t)
             }
     else:
         res_to_send = 'success'
@@ -418,7 +440,7 @@ def logout_common(request, site):
                     'sessionid' : '',
                     'status': res_to_send,
                     'status_code': 0,
-                    'usrmsg': ''
+                    'message': ''
         }
 
     con.commit()
@@ -433,10 +455,10 @@ def logout_common(request, site):
 def signup():
     if request.method=="OPTIONS":
         print("inside signup options")
-        response1 = make_response(jsonify("inside signup options"),200)
-        #response1.headers['Access-Control-Allow-Headers'] = "Origin, entityid, Content-Type, X-Auth-Token, countryid"
-        #response1.headers.add("Access-Control-Allow-Headers", "Origin, entityid, Content-Type, X-Auth-Token, countryid")
-        return response1
+        #response1 = make_response(jsonify("inside signup options"),200)
+        #return response1
+        return "inside logout options"
+
 
     elif request.method=="POST":
         print("inside signup POST")
@@ -464,23 +486,27 @@ def signup():
             "payload" : payload,
             "typeoper" : "signupwtkn",
             "token": token
-        }
+        }   
 
         respo = signup_common(sign_data)
         print("respo")
         print(respo)
-        if respo["status"] == "success":
+        if respo["status"] == "success" or "fail":
+            '''
             respm = {
                 'status': respo["status"],
                 'error_msg' : respo["error_msg"]
             }
-            resps = make_response(jsonify(respm), 200)
+            '''
+            resps = make_response(jsonify(respo), 200)
         else:
+            '''
             respm = {
                 'status': respo["status"],
                 'error_msg' : respo["error_msg"]
             }
-            resps = make_response(jsonify(respm), 400)
+            '''
+            resps = make_response(jsonify(respo), 400)
         return resps
 
 
@@ -546,21 +572,26 @@ def signup_common(sign_data):
 
     print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-    payload = sign_data["payload"]["signup_frm"]
-    usr_payload = sign_data["payload"]["usrpass_frm"]
 
+    payload = sign_data["payload"]
+    print(payload)
+
+    '''
+    usr_payload = sign_data["payload"]["usrpass_frm"]
+    '''
     if sign_data["payload"].get("otherapp", None) != None:
         otherapp = sign_data["payload"]['otherapp']
     else:
         otherapp = None
-        s, f, t= errhand.get_status(s, 100, f, "other app identifier not sent", t, "no")
-
+        s, f, t= errhand.get_status(s, 0, f, "other app identifier not sent", t, "no")
+  
     if sign_data.get("typeoper", None) != None:
         typeoper = sign_data['typeoper']
     else:
         typeoper = None
         s, f, t= errhand.get_status(s, 100, f, "type of operation not sent", t, "no")
-
+    print(typeoper)
+    '''
     if payload.get("custtype", None) != None:
         usercusttype = payload['custtype']['value']
     else:
@@ -599,28 +630,32 @@ def signup_common(sign_data):
     else:
         sinupmobile = None
         s, f, t= errhand.get_status(s, 100, f, "No mobile data from client", t, "yes")
-
+    '''
     if sign_data.get("entityid",None) != None:
         entityid =  sign_data["entityid"]
     else:
         s, f, t= errhand.get_status(s, 100, f, "No entityid detail from client", t, "yes")
-
+    print(entityid)
+    
     if sign_data.get("countryid",None) != None:
         countryid =  sign_data["countryid"]
     else:
         s, f, t= errhand.get_status(s, 100, f, "No countryid detail from client", t, "yes")
+    print(countryid)
 
     if typeoper == "signupwtkn":
         if sign_data.get("userid",None) != None:
             userid =  sign_data["userid"]
         else:
             s, f, t= errhand.get_status(s, 100, f, "No user id detail from client", t, "yes")
+        print(userid)
 
         if sign_data.get("token",None) != None:
             token =  sign_data["token"]
         else:
             s, f, t= errhand.get_status(s, 100, f, "No token detail from client", t, "yes")        
-        
+        print(token)
+
         email = None
 
     elif typeoper == "signupnotkn":
@@ -636,9 +671,11 @@ def signup_common(sign_data):
         s, f, t= errhand.get_status(s, 100, f, "Type of operation "+ typeoper + "is not handled", t, "no")
 
     usertype='W'
-    userstatus = 'S'
+    userstatus = 'A' #Active user at the time of creation
+    userrole = 'W' #Write access for the site
+    siteaccessstatus = 'A' #Active user at the time of creation
     uid= None
-    print(sinupadhaar,sinuppan,sinuparn,sinupmobile)
+    #print(sinupadhaar,sinuppan,sinuparn,sinupmobile)
     if s <= 0:
         # firebase auth setup
         try:
@@ -672,6 +709,8 @@ def signup_common(sign_data):
             exp = decoded_token.get("exp", None)
             iat = decoded_token.get("iat", None)
             email = decoded_token.get("email", None)
+            name = decoded_token.get("name", None)
+
     
     elif typeoper == "signupnotkn" and s <= 0:
         print("inside signupnotkn")
@@ -686,6 +725,7 @@ def signup_common(sign_data):
             uid = format(user.uid)
             print(uid)
     print(entityid)
+    '''
     if entityid != None and s <= 0:
         try:
             print('start set custom')
@@ -701,7 +741,7 @@ def signup_common(sign_data):
         print('else after autherror')
         if entityid == None:
             s, f, t = errhand.get_status(s, 100, f, "No entity id from client", t, "yes")
-
+    '''
     print('apppa mudichachu')
     print(uid)
 
@@ -718,6 +758,13 @@ def signup_common(sign_data):
             userid = None
             s, f, t = errhand.get_status(s, 100, f, "No user id from client" , t, "yes")
         
+
+        if name != None:
+            name = name
+        else:
+            name = None
+            s, f, t = errhand.get_status(s, 0, f, "No name details in token" , t, "yes")
+        
         
     if s <= 0:
         con, cur, s1, f1 = db.mydbopncon()
@@ -726,7 +773,7 @@ def signup_common(sign_data):
         
 
     if s <= 0:
-
+        '''
         sql = "SELECT json_agg(a) FROM ("
         sql = sql + "SELECT l.userid, l.username, l.usertype, l.usercusttype, l.entityid, "
         sql = sql + "d.sinupusername, d.sinupadhaar, d.sinuppan, d.sinupmobile, d.sinupemail, d.sinuparn "
@@ -764,18 +811,16 @@ def signup_common(sign_data):
         '''
         command = cur.mogrify("""
                                 SELECT json_agg(a) FROM (
-                                SELECT l.userid, l.username, l.usertype, l.usercusttype, l.entityid, 
-                                d.sinupusername, d.sinupadhaar, d.sinuppan, d.sinupmobile, d.sinupemail, d.sinuparn
+                                SELECT l.userid, l.useremail
                                 FROM ncusr.userlogin l
-                                LEFT JOIN ncusr.userdetails d ON l.userid = d.userid AND l.entityid = d.entityid
-                                WHERE l.userstatus != 'I'
+                                WHERE l.userstatus != 'D'
                                 AND (
-                                        l.userid = %s OR d.sinupadhaar = %s OR d.sinuppan = %s OR sinuparn = %s OR d.sinupmobile = %s OR d.sinupemail = %s
+                                        l.userid = %s OR l.useremail = %s
                                     )
                                 AND l.entityid = %s AND l.countryid = %s
                                 ) as a
-                            """,(uid,sinupadhaar,sinuppan,sinuparn,sinupmobile,sinupemail,entityid,countryid,) )
-        '''
+                            """,(uid,sinupemail,entityid,countryid,) )
+
         print(command)
         cur, s1, f1 = db.mydbfunc(con,cur,command)
         s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
@@ -801,12 +846,12 @@ def signup_common(sign_data):
             #validate 
             pyld = {
                     "userid" : userid,
-                    "sinupadhaar" : sinupadhaar,
-                    "sinuppan" : sinuppan,
-                    "sinuparn" : sinuparn,
-                    "sinupmobile" : sinupmobile,
+                    #"sinupadhaar" : sinupadhaar,
+                    #"sinuppan" : sinuppan,
+                    #"sinuparn" : sinuparn,
+                    #"sinupmobile" : sinupmobile,
                     "sinupemail" : sinupemail,
-                    "usercusttype" : usercusttype
+                    #"usercusttype" : usercusttype
             }
 
             othapp_res_stat, usrmsg, insert_or_not = allow_regis_user(db_json_rec, pyld, otherapp)
@@ -834,9 +879,9 @@ def signup_common(sign_data):
 
         if s <= 0:
             command = cur.mogrify("""
-                        INSERT INTO ncusr.userlogin (userid, usertype, usercusttype, userstatus, userstatlstupdt, octime, lmtime, entityid, countryid) 
+                        INSERT INTO ncusr.userlogin (userid, username, useremail, userstatus, userstatlstupdt, octime, lmtime, entityid, countryid) 
                         VALUES (%s,%s,%s,%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
-                        """,(userid, usertype, usercusttype, userstatus, entityid, countryid,))
+                        """,(userid, name, sinupemail, userstatus, entityid, countryid,))
             print(command)
             cur, s1, f1 = db.mydbfunc(con,cur,command)
             s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
@@ -848,9 +893,9 @@ def signup_common(sign_data):
 
         if s <= 0:
             command = cur.mogrify("""
-                        INSERT INTO ncusr.userdetails (userid, usercusttype, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, octime, lmtime, entityid, countryid) 
-                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
-                        """,(userid, usercusttype, sinupusername, sinupadhaar, sinuppan, sinuparn, sinupmobile, sinupemail, entityid, countryid,))
+                        INSERT INTO ncusr.useraccess (userid, site, role, accessstatus, octime, lmtime, entityid, countryid) 
+                        VALUES (%s,%s,%s,%s,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,%s,%s);
+                        """,(userid, entityid, userrole, siteaccessstatus, entityid, countryid,))
             print(command)
             cur, s1, f1 = db.mydbfunc(con,cur,command)
             s, f, t= errhand.get_status(s, s1, f, f1, t, "no")
@@ -864,7 +909,7 @@ def signup_common(sign_data):
         if s <= 0:
             con.commit()
             db.mydbcloseall(con, cur)
-
+    '''
     if s <= 0:
         pan_payload = {
             "userid" : userid,
@@ -880,18 +925,24 @@ def signup_common(sign_data):
             s, f, t = errhand.get_status(s, 0, f, "KYC update success", t, "no")
         else:
             s, f, t = errhand.get_status(s, 0, f, "KYC update failed", t, "no")
-    
+    '''
 
     if othapp_res_stat == "success" and s <= 0:
         response = {
+                'uid' : userid,
+                'sessionid' : None,
                 'status': 'success',
-                'error_msg' : ''
+                'status_code': s,
+                'message' : ''
             }
         #resps = make_response(jsonify(response), 200)
     else:
         response = {
+            'uid' : userid,
+            'sessionid' : None,
             'status': 'fail',
-            'error_msg' : usrmsg
+            'status_code': s,
+            'message' : usrmsg
         }              
 
     print (response)
@@ -900,7 +951,7 @@ def signup_common(sign_data):
 
 
 
-def allow_regis_user(db_json_rec, pyld, otherapp):
+def allow_regis_user(db_json_rec, pyld, otherapp= False):
     print("inside allow_regis_user")
     stat = "success"
     usrmsg = None
@@ -911,8 +962,8 @@ def allow_regis_user(db_json_rec, pyld, otherapp):
     
     for rec in db_json_rec:
 
-        if rec['sinupemail'] != '':
-            if rec['sinupemail'] == pyld["sinupemail"]:
+        if rec['useremail'] != '':
+            if rec['useremail'] == pyld["sinupemail"]:
                 #usrm = "Email Already registered" if usrm == None else usrm + " | Email Already registered"
                 email_exist = True  # All other values should match
                 eusrm = "Email Already registered"
@@ -999,7 +1050,7 @@ def chk_if_value_match(rec, pyld, find = "any", include_usr_val = "yes"):
             else:
                 all_rec_match = False
                 usrmf = "Userid doesn't exists for the Email id" if usrmf == None else usrmf + " | Userid doesn't exists for the Email id"
-
+    '''
     if rec['sinupadhaar'] != '':
         if rec['sinupadhaar'] == pyld["sinupadhaar"]:
             usrms = "Adhaar Already registered" if usrms == None else usrms + " | Adhaar Already registered"
@@ -1035,6 +1086,7 @@ def chk_if_value_match(rec, pyld, find = "any", include_usr_val = "yes"):
         else:
             all_rec_match = False
             usrmf = "Mobile doesn't registered" if usrmf == None else usrmf + " | Mobile doesn't registered"
+    '''
 
     if find == "all":
         rec_match = all_rec_match
@@ -1226,3 +1278,107 @@ def kyc_detail_update(pan_data):
 
         return kyc_sta, kyc_data
 
+@bp_login.route("/userregchk",methods=["GET","POST","OPTIONS"])
+def userregchk():
+    if request.method=="OPTIONS":
+        print("inside login options")
+        return "inside login options"
+
+    elif request.method=="GET":
+        res_to_send, response = userregchk_common(request, 'nc')
+
+        if res_to_send == 'success' or 'fail':
+            resps = make_response(jsonify(response), 200)    
+            #resps = make_response(jsonify(response), 200 if res_to_send == 'success' else 400)
+        else:
+            resps = make_response(jsonify(response), 400)
+        #dfdfdf
+        return resps
+
+def userregchk_common(request, site):
+    print("inside login GET")
+    s = 0
+    f = None
+    t = None #message to front end
+    response = None
+    res_to_send = 'fail'
+    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    dtkn = jwtf.decodetoken(request, needtkn = False)
+    userid = dtkn.get("user_id", None)
+    entityid = request.headers.get("entityid", None)
+    cntryid = request.headers.get("countryid", None)
+
+    print("iamback")
+    print(userid)
+    print(entityid)
+
+    if userid == None:
+        s, f, t= errhand.get_status(s, 100, f, "No user details sent from client", t, "yes")
+    if entityid == None:
+        s, f, t= errhand.get_status(s, 100, f, "No entity details sent from client", t, "yes")
+    if cntryid == None:
+        s, f, t= errhand.get_status(s, 100, f, "No country details sent from client", t, "yes")
+    
+    if s <= 0:
+        con, cur, s1, f1 = db.mydbopncon()
+        s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
+        s1, f1 = 0, None
+
+    if s <= 0:
+        command = cur.mogrify("""
+                                SELECT COUNT(1) FROM ncusr.userlogin WHERE
+                                userid = %s AND entityid = %s AND countryid = %s
+                                AND userstatus NOT IN ('D') ;
+                            """,(userid, entityid, cntryid,) )
+        print(command)
+        cur, s1, f1 = db.mydbfunc(con,cur,command)
+        s, f, t = errhand.get_status(s, s1, f, f1, t, "no")
+        s1, f1 = 0, None
+        print('----------------')
+        print(s)
+        print(f)
+        print('----------------')
+        if s > 0:
+            s, f, t = errhand.get_status(s, 200, f, "User data fetch failed with DB error", t, "no")
+    print(s,f)
+
+    if s <= 0:
+        user_cnt = cur.fetchall()[0][0]
+        print(user_cnt)
+
+
+    if s > 0:
+        res_to_send = 'fail'
+        response = {
+            'uid' : userid,
+            'sessionid' : '',
+            'status': res_to_send,
+            'status_code': s,
+            'message': errhand.error_msg_reporting(s, t)
+            }
+    else:
+        if user_cnt > 0:
+            res_to_send = 'success'
+            response = {
+                        'uid' : userid,
+                        'sessionid' : None,
+                        'status': res_to_send,
+                        'status_code': 0,
+                        'message': ''
+            }
+        else:
+            s, f, t = errhand.get_status(s, 401, f, "Not a registered user. Signup",t,"yes")
+            res_to_send = 'fail'
+            response = {
+                'uid' : userid,
+                'sessionid' : None,
+                'status': res_to_send,
+                'status_code': s,
+                'message': errhand.error_msg_reporting(s, t)
+                }
+
+    print(response)
+    
+    return (res_to_send, response)
+    

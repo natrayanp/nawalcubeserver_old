@@ -1,11 +1,11 @@
 from . import bp_appfunc
 from flask import redirect, request,make_response, jsonify
 #from flask_cors import CORS, cross_origin
-from nawalcube.common import dbfunc as db
-from nawalcube.common import error_logics as errhand
-from nawalcube.common import jwtfuncs as jwtf
+from assetscube.common import dbfunc as db
+from assetscube.common import error_logics as errhand
+from assetscube.common import jwtfuncs as jwtf
 from datetime import datetime, timedelta
-from nawalcube.common import configs as config
+from assetscube.common import configs as config
 import os
 import hashlib
 import hmac

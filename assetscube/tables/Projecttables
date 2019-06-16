@@ -1,27 +1,3 @@
-#############################################################################################################################
-#                                                   Manual updates                                                          # #############################################################################################################################
-# After user signup - So users can continue with login                                                                      #
-#---------------------------------------------------------------------------------------------------------------------------#
-#                                                                                                                           #
-# 1) userlogin --> lguserstatus are to be inserted at the time of activating the user                                       #
-# Example : update userlogin set lgusername = 'natrayan p', lguserstatus='A' WHERE lguserid='BfulXOzj3ibSPSBDVgzMEAF1gax1'  #
-# and lgentityid='IN';                                                                                                      #
-#                                                                                                                           #
-# 2) uccclientmaster --> CLIENTAPPNAME1,CLIENTAPPNAME2,CLIENTAPPNAME3 are to be inserted at the time of activating the user #
-#    update uccclientmaster set CLIENTAPPNAME1 = 'natrayan p' WHERE ucclguserid = 'BfulXOzj3ibSPSBDVgzMEAF1gax1'            #
-#        and uccentityid = 'IN';                                                                                            #
-#                                                                                                                           #
-# 3) fatcamaster --> INV_NAME  are to be inserted at the time of activating the user                                        #
-#    update fatcamaster set inv_name = 'natrayan p' WHERE fatcalguserid = 'BfulXOzj3ibSPSBDVgzMEAF1gax1'                    #
-#         and fatcaentityid = 'IN';                                                                                         #
-#                                                                                                                           #
-# 4) AFter user completes UCC & FATCA UPLOAD complete.  AOF file to be downloaded and entry to be made in to the table.     #
-#   INSERT INTO fileuploadmaster (fupllguserid,fuplfilecat,fuplfiletype,fuplfilename,fuplfiles3bucket,fuplfiles3key,        #
-#   fuplfilesubmitstaus,fuploctime,fupllmtime,fuplentityid) VALUES ('BfulXOzj3ibSPSBDVgzMEAF1gax1','U','AOF',               #
-#    'BfulXOzj3ibSPSBDVgzMEAF1gax1INAOF.tiff','zappa-44lyjdddx','BfulXOzj3ibSPSBDVgzMEAF1gax1INAOF.tiff','I',               #
-#     CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'IN');                                                                            #
-#                                                                                                                           #
-#############################################################################################################################
 payload = {"UserId":"1712301","MemberId":"17123","Password":"@654321"}
 SELECT pg_size_pretty( pg_database_size('amcdb') );
 SELECT pg_size_pretty( pg_total_relation_size('webapp.navcurload') );
@@ -37,22 +13,13 @@ $ pip-review --local --interactive
 
 -- schema for the application
 CREATE SCHEMA ncusr;
-CREATE SCHEMA ncapp;
-CREATE SCHEMA ncapi;
-CREATE SCHEMA ncamc;
-
 
 ---Login table
 CREATE TABLE ncusr.userlogin (
     userid 		               varchar(100) NOT NULL PRIMARY KEY,
-	username    		       varchar(100),  --PAN name
-    usertype			       varchar(2) NOT NULL, --> (A - Admin, R - Read only, W- Write)
-    usercusttype               varchar(10) NOT NULL, --> (A - Admin, I - Investor, D - MFD, A - RIA, T - Trusted app,
-                                                     -->  Derived users TI,AI, DI- investor in trusted/Distributor/Advisor's app, 
-                                                     -->  P - Portfolio tool [All user using tool are only Investors who must regiester directly in nawalcube] )
-    userstatus		           varchar(2) NOT NULL, --> (S-Signup complted, Y - KYC NON COMPLIANT, R-Registration in progress, U-Registration done image upload pending,
-                                                    --> P - Registration and upload done waiting to be active, A- Active, B-Blocked , I-Deleteduser)
-    kyc_compliant              varchar(2),           --> Y - Compliant, N -non-compliant        
+	username    		       varchar(100),  --firebase. User.displayname
+    useremail                  varchar(100) NOT NULL,
+    userstatus		           varchar(2) NOT NULL, --> (A- Active, B-Blocked, D-Deleted)
     userstatlstupdt	           timestamptz NOT NULL,
     octime			           timestamptz NOT NULL,
     lmtime			           timestamptz NOT NULL,
@@ -62,31 +29,22 @@ CREATE TABLE ncusr.userlogin (
 
 -- Creation of Admin user
 INSERT INTO ncusr.userlogin (userid,username,usertype,usercusttype,userstatus,kyc_compliant,userstatlstupdt,octime,lmtime,entityid,countryid)
-VALUES ('IIshUrOhAbXX1BW6al0sCogabYv1','admin','A','A','A','N',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'NAWALCUBE','IN');
+VALUES ('lIYuGM2274aDIWCgIf6COXK81NC2','admin','A','A','A','N',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'NAWALCUBE','IN');
 
 
--- User registration details
-CREATE TABLE ncusr.userdetails (
+---user access permission table
+CREATE TABLE ncusr.useraccess (
     userid 		               varchar(100) NOT NULL REFERENCES ncusr.userlogin(userid),
-    usercusttype               varchar(10) NOT NULL,
-    sinupusername    		   varchar(100) NOT NULL,
-    sinupadhaar                varchar(30),
-    sinuppan                   varchar(10),
-    sinuparn                   varchar(10),
-    sinupmobile                varchar(15) NOT NULL,
-    sinupemail                 varchar(100) NOT NULL,
-    clientcode                 Varchar(10),-- REFERENCES ncusr.uccclientmaster(clientcode),
-    membercode                 varchar(20),-- REFERENCES ncusr.fatcamaster(membercode),
-    userkycstatus              varchar(1) NOT NULL DEFAULT 'N',
+    site                       varchar(100),  --> nc - Nawalcube, dv - developer, au - auth
+    role                       varchar(100),  --> ADMIN,READONLY,WRITE,NODELETE
+    accessstatus	           varchar(2) NOT NULL, --> (A- Active, B-Blocked) for the site
     octime			           timestamptz NOT NULL,
     lmtime			           timestamptz NOT NULL,
     entityid                   varchar(20) NOT NULL,
-    countryid                  varchar(10) NOT NULL
-);
+    countryid                  varchar(10) NOT NULL,
+    CONSTRAINT us PRIMARY KEY (userid, site)  
+    );
 
--- Creation of Admin user
-INSERT INTO ncusr.userdetails(userid,usercusttype,sinupusername,sinupadhaar,sinuppan,sinuparn,sinupmobile,sinupemail,clientcode,membercode,userkycstatus,octime,lmtime,entityid,countryid)
-VALUES ('IIshUrOhAbXX1BW6al0sCogabYv1','A','admin user','','','','5656','admin@gmail.com','','','N',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'NAWALCUBE','IN');
 
 -- Login history
 CREATE TABLE ncusr.loginh (

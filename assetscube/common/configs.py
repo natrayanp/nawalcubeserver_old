@@ -1,6 +1,6 @@
 # LIVE = 0
 # UAT = 1
-LIVE = 0
+LIVE = 1
 
 SIGNUPURL = ["https://nawalcube.com/login/signup","http://localhost:4200/login/signup"]
 LOGINURL = ["https://nawalcube.com/authorise/auth","http://localhost:4200/authorise/auth"]
